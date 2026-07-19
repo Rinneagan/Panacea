@@ -1,6 +1,7 @@
 <script lang="ts">
   import { appData } from '$lib/stores';
   import { Target, TrendingUp, Award, Zap, Calendar, Activity, ChevronRight, Briefcase, GraduationCap, Flame, ArrowUpRight, Check } from 'lucide-svelte';
+  import { onMount } from 'svelte';
 
   // Metrics
   let totalJobs = $derived($appData.jobs.length);
@@ -12,6 +13,41 @@
   let totalColleges = $derived($appData.colleges.length);
   let collegesSubmitted = $derived($appData.colleges.filter(c => ['Submitted', 'Interview', 'Accepted', 'Waitlisted', 'Deferred', 'Enrolled'].includes(c.status)).length);
   let collegesAccepted = $derived($appData.colleges.filter(c => ['Accepted', 'Enrolled'].includes(c.status)).length);
+  
+  // Animated Counters
+  let dispTotalApps = $state(0);
+  let dispJobConv = $state(0);
+  let dispJobsOffer = $state(0);
+  let dispJobsInterview = $state(0);
+
+  $effect(() => {
+    // We only want to run this once when the derived metrics are calculated. 
+    // Using $effect ensures it runs on mount and tracks changes.
+    let frame: number;
+    let start = Date.now();
+    const duration = 1500;
+    const targetApps = totalJobs + totalColleges;
+    const targetConv = jobConversion;
+    const targetOffer = jobsOffer;
+    const targetInt = jobsInterview;
+    
+    function animate() {
+      const now = Date.now();
+      const progress = Math.min((now - start) / duration, 1);
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      
+      dispTotalApps = Math.round(easeOut * targetApps);
+      dispJobConv = Math.round(easeOut * targetConv);
+      dispJobsOffer = Math.round(easeOut * targetOffer);
+      dispJobsInterview = Math.round(easeOut * targetInt);
+      
+      if (progress < 1) {
+        frame = requestAnimationFrame(animate);
+      }
+    }
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  });
 
   // Gamification (XP & Level)
   let xp = $derived.by(() => {
@@ -213,8 +249,43 @@
   <title>Command Center | Panacea</title>
 </svelte:head>
 
+<style>
+  @keyframes ticker {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+  .animate-ticker {
+    animation: ticker 20s linear infinite;
+  }
+  .animate-ticker:hover {
+    animation-play-state: paused;
+  }
+</style>
+
 <div class="grid grid-cols-1 md:grid-cols-6 gap-6 max-w-7xl mx-auto fade-in pb-12">
   
+  <!-- Live Ticker (Spans all cols) -->
+  <div class="glass-panel md:col-span-6 overflow-hidden flex items-center py-2 relative bg-gradient-to-r from-slate-900 to-black text-white border-white/10 card-hover !translate-y-0 !shadow-md h-10">
+    <div class="flex items-center absolute left-0 z-10 bg-gradient-to-r from-slate-900 via-slate-900 to-transparent pr-8 pl-4 h-full">
+      <div class="w-2 h-2 bg-rose-500 rounded-full animate-pulse mr-2 shadow-[0_0_8px_rgba(244,63,94,1)]"></div>
+      <span class="text-[10px] font-bold uppercase tracking-widest text-slate-300">Live</span>
+    </div>
+    <div class="flex whitespace-nowrap animate-ticker pl-[100%] text-sm font-semibold text-slate-300 w-full hover:text-white transition-colors">
+      {#each upcomingDeadlines as d}
+        <span class="mx-8 flex items-center gap-2">
+          <span class="text-amber-500">•</span>
+          {d.title} ({d.subtitle}) - <span class="text-indigo-400">{new Date(d.timestamp).toLocaleDateString()}</span>
+        </span>
+      {/each}
+      {#if upcomingDeadlines.length === 0}
+        <span class="mx-8 flex items-center gap-2">
+          <span class="text-amber-500">•</span>
+          No immediate deadlines. Keep pushing!
+        </span>
+      {/if}
+    </div>
+  </div>
+
   <!-- Bento: Hero (Spans 4 cols on desktop) -->
   <div class="glass-panel md:col-span-4 p-8 relative overflow-hidden group card-hover text-white bg-[#0A0A0A] border-white/10 shadow-2xl flex flex-col justify-center min-h-[220px]">
     <!-- Animated Gradients -->
@@ -320,25 +391,26 @@
   </div>
 
   <!-- Bento: Metrics Grid (Spans 2 cols) -->
-  <div class="glass-panel md:col-span-2 p-6 card-hover flex flex-col gap-4 min-h-[200px]">
-    <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Global Metrics</h3>
+  <div class="glass-panel md:col-span-2 p-6 card-hover flex flex-col gap-4 min-h-[200px] relative overflow-hidden group">
+    <div class="absolute -top-10 -right-10 w-32 h-32 bg-indigo-400/20 rounded-full mix-blend-screen filter blur-[40px] group-hover:scale-150 transition-transform duration-700"></div>
+    <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 relative z-10">Global Metrics</h3>
     
-    <div class="grid grid-cols-2 gap-3 flex-1">
-      <div class="bg-slate-50 dark:bg-white/5 rounded-xl p-3 border border-slate-100 dark:border-white/10 flex flex-col justify-center">
+    <div class="grid grid-cols-2 gap-3 flex-1 relative z-10">
+      <div class="bg-slate-50 dark:bg-white/5 rounded-xl p-3 border border-slate-100 dark:border-white/10 flex flex-col justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
         <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Apps</p>
-        <p class="text-2xl font-black text-slate-900 dark:text-white">{totalJobs + totalColleges}</p>
+        <p class="text-2xl font-black text-slate-900 dark:text-white">{dispTotalApps}</p>
       </div>
-      <div class="bg-indigo-50 dark:bg-indigo-500/10 rounded-xl p-3 border border-indigo-100 dark:border-indigo-500/20 flex flex-col justify-center">
+      <div class="bg-indigo-50 dark:bg-indigo-500/10 rounded-xl p-3 border border-indigo-100 dark:border-indigo-500/20 flex flex-col justify-center hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors">
         <p class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1">Conversion</p>
-        <p class="text-2xl font-black text-indigo-700 dark:text-indigo-300">{jobConversion}%</p>
+        <p class="text-2xl font-black text-indigo-700 dark:text-indigo-300">{dispJobConv}%</p>
       </div>
-      <div class="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-3 border border-emerald-100 dark:border-emerald-500/20 flex flex-col justify-center">
+      <div class="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-3 border border-emerald-100 dark:border-emerald-500/20 flex flex-col justify-center hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors">
         <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Offers</p>
-        <p class="text-2xl font-black text-emerald-700 dark:text-emerald-300">{jobsOffer}</p>
+        <p class="text-2xl font-black text-emerald-700 dark:text-emerald-300">{dispJobsOffer}</p>
       </div>
-      <div class="bg-rose-50 dark:bg-rose-500/10 rounded-xl p-3 border border-rose-100 dark:border-rose-500/20 flex flex-col justify-center">
+      <div class="bg-rose-50 dark:bg-rose-500/10 rounded-xl p-3 border border-rose-100 dark:border-rose-500/20 flex flex-col justify-center hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors">
         <p class="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-1">Interviews</p>
-        <p class="text-2xl font-black text-rose-700 dark:text-rose-300">{jobsInterview}</p>
+        <p class="text-2xl font-black text-rose-700 dark:text-rose-300">{dispJobsInterview}</p>
       </div>
     </div>
   </div>

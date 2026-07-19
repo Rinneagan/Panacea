@@ -964,25 +964,16 @@
             </div>
           {:else}
             <!-- Mini Browser Tab -->
-            {#if entry.portalLink}
-              <div class="flex-1 flex flex-col relative min-h-[350px]">
-                <div class="flex justify-between items-center mb-3">
-                  <span class="text-xs text-slate-500 font-medium truncate pr-2" title={entry.portalLink}>{entry.portalLink}</span>
-                  <a href={entry.portalLink} target="_blank" rel="noopener" class="shrink-0 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors shadow-sm border border-indigo-100 dark:border-indigo-500/20">Open ↗</a>
-                </div>
-                <div class="flex-1 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 bg-white">
-                  <iframe src={entry.portalLink} class="w-full h-full border-none" title="School Portal" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
-                </div>
+            <div class="flex-1 flex flex-col relative min-h-[350px]">
+              {@const searchUrl = entry.portalLink || `https://www.google.com/search?igu=1&q=${encodeURIComponent((entry.school || entry.company || 'College Application') + ' admissions')}`}
+              <div class="flex justify-between items-center mb-3">
+                <span class="text-xs text-slate-500 font-medium truncate pr-2" title={searchUrl}>{searchUrl.startsWith('https://www.google.com') ? 'Google Search' : searchUrl}</span>
+                <a href={searchUrl} target="_blank" rel="noopener" class="shrink-0 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors shadow-sm border border-indigo-100 dark:border-indigo-500/20">Open ↗</a>
               </div>
-            {:else}
-              <div class="flex flex-col items-center justify-center h-full text-center p-4">
-                <div class="w-12 h-12 bg-slate-100 dark:bg-white/5 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                </div>
-                <p class="text-sm font-bold text-slate-700 dark:text-slate-300">No link found</p>
-                <p class="text-xs text-slate-500 mt-2 font-medium">Select a school or enter a URL in the details section to browse the site here.</p>
+              <div class="flex-1 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 bg-white">
+                <iframe src={searchUrl} class="w-full h-full border-none" title="Mini Browser" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
               </div>
-            {/if}
+            </div>
           {/if}
         </div>
       </div>

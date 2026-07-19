@@ -6,8 +6,10 @@
   import EssayClumper from '$lib/components/EssayClumper.svelte';
   import EntryCard from '$lib/components/EntryCard.svelte';
   import KanbanBoard from '$lib/components/KanbanBoard.svelte';
+  import PhDAIMatcher from '$lib/components/PhDAIMatcher.svelte';
   
   let activeTrack: 'Undergrad' | 'PhD' = 'PhD';
+  let phdView = $state<'apps' | 'matcher'>('apps');
   let trackColleges = $derived($appData.colleges.filter(c => c.degreeType === 'PhD'));
 
   let activeColleges = $derived(trackColleges.filter(c => !['Accepted', 'Rejected', 'Enrolled'].includes(c.status)).length);
@@ -108,12 +110,11 @@
       <p class="text-emerald-100/80 text-sm max-w-xl font-medium leading-relaxed mb-6">Track your applications, essays, recommendations, and financial aid deadlines.</p>
       
       <!-- Track Switcher -->
-      <div class="flex flex-col gap-4">
-        <div class="flex items-center p-1 bg-white/10 backdrop-blur-md rounded-xl w-fit border border-white/10 shadow-inner">
-          <button class="px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all bg-white text-[#0A0A0A] shadow-md">PhD & Grad</button>
+      <div class="flex flex-col sm:flex-row items-center gap-4">
+        <div class="flex flex-wrap items-center p-1 bg-white/10 backdrop-blur-md rounded-xl w-full sm:w-fit border border-white/10 shadow-inner">
+          <button class="flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all {phdView === 'apps' ? 'bg-white text-[#0A0A0A] shadow-md' : 'text-emerald-50 hover:text-white hover:bg-white/5'}" onclick={() => phdView = 'apps'}>PhD Apps</button>
+          <button class="flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all {phdView === 'matcher' ? 'bg-white text-[#0A0A0A] shadow-md' : 'text-emerald-50 hover:text-white hover:bg-white/5'}" onclick={() => phdView = 'matcher'}>AI Matcher</button>
         </div>
-        
-
       </div>
       
       <div class="mt-6 flex flex-wrap gap-4">
@@ -141,7 +142,7 @@
   </div>
 </div>
 
-
+{#if phdView === 'apps'}
 <section class="flex flex-col gap-6 w-full min-w-0">
   <!-- Quicklinks bar -->
   <div class="flex flex-wrap items-center gap-3">
@@ -254,5 +255,8 @@
     />
   {/if}
 </section>
+{:else if phdView === 'matcher'}
+  <PhDAIMatcher />
+{/if}
 
 <AIAssistant degreeType={activeTrack} />

@@ -111,7 +111,7 @@
     {/if}
 
     <!-- Navigation -->
-    <nav class="flex-1 flex flex-col gap-1.5 w-full">
+    <nav class="flex-1 flex flex-col gap-1.5 w-full overflow-y-auto custom-scroll pr-1 min-h-0">
       {#if !$layoutState.isSidebarCollapsed || $layoutState.isMobileMenuOpen}
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-2 fade-in">Overview</p>
       {/if}
@@ -137,42 +137,6 @@
 
       {@render NavItem({ href: "/inbox", icon: Mail, label: "Email Inbox", collapsed: $layoutState.isSidebarCollapsed && !$layoutState.isMobileMenuOpen, active: isActive('/inbox') })}
 
-      <!-- Nested Documents List -->
-      {#if !$layoutState.isSidebarCollapsed || $layoutState.isMobileMenuOpen}
-        <div class="mt-2 ml-4 border-l border-slate-200 dark:border-white/10 pl-2 flex flex-col gap-1 fade-in">
-          <div class="flex items-center justify-between px-3 py-1 mb-1">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Your Docs</span>
-            <button class="text-slate-400 hover:text-black dark:hover:text-white transition-colors" title="New Document" onclick={() => {
-              const newDoc = {
-                id: crypto.randomUUID(),
-                title: 'Untitled Document',
-                content: '',
-                updatedAt: Date.now()
-              };
-              $appData.docs = [newDoc, ...($appData.docs || [])];
-              $activeDocId = newDoc.id;
-              window.location.href = '/docs';
-            }}>
-              <Plus size={14} strokeWidth={3} />
-            </button>
-          </div>
-          
-          <div class="max-h-40 overflow-y-auto custom-scroll pr-1 flex flex-col gap-0.5">
-            {#if !$appData.docs || $appData.docs.length === 0}
-              <span class="text-xs text-slate-400 px-3 py-1 font-medium italic">No docs yet</span>
-            {:else}
-              {#each $appData.docs as doc}
-                <button class="text-left w-full px-3 py-1.5 rounded-lg text-xs font-semibold truncate transition-colors {isActive('/docs') && $activeDocId === doc.id ? 'bg-slate-100 text-black dark:bg-white/10 dark:text-white' : 'text-slate-500 hover:bg-slate-50 hover:text-black dark:hover:bg-white/5 dark:hover:text-white'}" onclick={() => {
-                  $activeDocId = doc.id;
-                  if (!isActive('/docs')) window.location.href = '/docs';
-                }}>
-                  {doc.title || 'Untitled Document'}
-                </button>
-              {/each}
-            {/if}
-          </div>
-        </div>
-      {/if}
     </nav>
 
     <!-- Footer -->
