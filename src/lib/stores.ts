@@ -49,7 +49,7 @@ export function loadUserData(uid: string): Promise<void> {
           docs: data.docs || [],
           vaultStories: data.vaultStories || [],
           networkingContacts: data.networkingContacts || [],
-          settings: data.settings || { theme: 'system' },
+          settings: data.settings || { theme: 'light' },
           globalResume: data.globalResume,
           masterResume: data.masterResume
         });
@@ -57,7 +57,7 @@ export function loadUserData(uid: string): Promise<void> {
         const initialData: AppState = { jobs: [], colleges: [], activities: [], quickLinks: [
           { id: '1', label: 'Common App', url: 'https://apply.commonapp.org/' },
           { id: '2', label: 'FAFSA', url: 'https://studentaid.gov/h/apply-for-aid/fafsa' }
-        ], docs: [], vaultStories: [], networkingContacts: [], settings: { theme: 'system' } };
+        ], docs: [], vaultStories: [], networkingContacts: [], settings: { theme: 'light' } };
         appData.set(initialData);
         setDoc(docRef, initialData).catch(err => console.error(err));
       }
@@ -87,7 +87,7 @@ export function saveUserData(immediate = false) {
   if (saveTimer) clearTimeout(saveTimer);
   
   const doWrite = () => {
-    let currentState: AppState = { jobs: [], colleges: [], activities: [], quickLinks: [], docs: [], vaultStories: [], settings: { theme: 'system' } };
+    let currentState: AppState = { jobs: [], colleges: [], activities: [], quickLinks: [], docs: [], vaultStories: [], settings: { theme: 'light' } };
     const unsub = appData.subscribe(value => currentState = value);
     unsub();
     setDoc(doc(db, 'users', currentUserId as string), currentState).catch(err => console.error('Failed to save data', err));

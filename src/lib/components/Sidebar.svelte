@@ -45,18 +45,15 @@
 <!-- Mobile Bottom Nav (visible on sm and below) -->
 <nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-t border-slate-200/50 dark:border-white/10 z-50 flex items-center justify-around px-2 pb-safe">
   <a href="/" class="flex flex-col items-center justify-center w-14 h-full {isActive('/') ? 'text-black dark:text-white' : 'text-slate-400 dark:text-slate-500'}">
-    <LayoutDashboard size={20} class="mb-1" />
-  </a>
-  <a href="/dashboard" class="flex flex-col items-center justify-center w-14 h-full {isActive('/dashboard') ? 'text-black dark:text-white' : 'text-slate-400 dark:text-slate-500'}">
-    <BarChart2 size={20} class="mb-1" />
+    <Home size={20} class="mb-1" />
   </a>
   <a href="/jobs" class="flex flex-col items-center justify-center w-14 h-full {isActive('/jobs') ? 'text-black dark:text-white' : 'text-slate-400 dark:text-slate-500'}">
     <Briefcase size={20} class="mb-1" />
   </a>
-  <a href="/college" class="flex flex-col items-center justify-center w-14 h-full {isActive('/college') ? 'text-black dark:text-white' : 'text-slate-400 dark:text-slate-500'}">
+  <a href="/undergrad" class="flex flex-col items-center justify-center w-14 h-full {isActive('/undergrad') ? 'text-black dark:text-white' : 'text-slate-400 dark:text-slate-500'}">
     <GraduationCap size={20} class="mb-1" />
   </a>
-  <a href="/docs" class="flex flex-col items-center justify-center w-14 h-full {isActive('/docs') ? 'text-black dark:text-white' : 'text-slate-400 dark:text-slate-500'}">
+  <a href="/resume" class="flex flex-col items-center justify-center w-14 h-full {isActive('/resume') ? 'text-black dark:text-white' : 'text-slate-400 dark:text-slate-500'}">
     <FileText size={20} class="mb-1" />
   </a>
   <button onclick={openSettings} class="flex flex-col items-center justify-center w-14 h-full text-slate-400 dark:text-slate-500">
