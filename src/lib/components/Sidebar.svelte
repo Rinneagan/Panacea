@@ -178,18 +178,7 @@
     <!-- Footer -->
     <div class="mt-auto pt-4 border-t border-slate-200/50 dark:border-white/10 flex flex-col w-full gap-1.5">
       
-      {#if !$layoutState.isSidebarCollapsed || $layoutState.isMobileMenuOpen}
-        <!-- Pomodoro Timer -->
-        <div class="px-3 py-3 mb-2 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl flex items-center justify-between transition-all group fade-in">
-          <div class="flex items-center gap-2">
-            <Timer class="text-indigo-500 dark:text-indigo-400" size={16} />
-            <span class="text-sm font-bold text-indigo-900 dark:text-indigo-300">Focus Mode</span>
-          </div>
-          <button class="text-xs font-bold px-2 py-1 bg-white dark:bg-[#222] text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 rounded-lg hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500 hover:border-transparent transition-colors shadow-sm" onclick={() => alert('Pomodoro Focus Mode started! (Simulated)')}>
-            25:00
-          </button>
-        </div>
-      {/if}
+
 
       <!-- Settings & Sign Out -->
       {@render NavItem({ href: "/settings", icon: Settings, label: "Settings", collapsed: $layoutState.isSidebarCollapsed && !$layoutState.isMobileMenuOpen, active: isActive('/settings') })}
