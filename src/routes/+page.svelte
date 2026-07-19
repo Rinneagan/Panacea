@@ -13,6 +13,7 @@
   let totalColleges = $derived($appData.colleges.length);
   let collegesSubmitted = $derived($appData.colleges.filter(c => ['Submitted', 'Interview', 'Accepted', 'Waitlisted', 'Deferred', 'Enrolled'].includes(c.status)).length);
   let collegesAccepted = $derived($appData.colleges.filter(c => ['Accepted', 'Enrolled'].includes(c.status)).length);
+  let activeColleges = $derived($appData.colleges.filter(c => !['Accepted', 'Rejected', 'Enrolled'].includes(c.status)).length);
   
   // Animated Counters
   let dispTotalApps = $state(0);
@@ -260,37 +261,35 @@
   .animate-ticker:hover {
     animation-play-state: paused;
   }
+  
+  /* EEG Animation */
+  @keyframes eegPulse {
+    0% { stroke-dashoffset: 100; opacity: 0.2; }
+    50% { opacity: 1; }
+    100% { stroke-dashoffset: 0; opacity: 0.2; }
+  }
+  .eeg-line {
+    stroke-dasharray: 100;
+    animation: eegPulse 3s linear infinite;
+  }
+
+  /* Radar Animation */
+  @keyframes radarSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  .radar-spin {
+    animation: radarSpin 4s linear infinite;
+    transform-origin: center;
+  }
 </style>
 
 <div class="grid grid-cols-1 md:grid-cols-6 gap-6 max-w-7xl mx-auto fade-in pb-12">
   
-  <!-- Live Ticker (Spans all cols) -->
-  <div class="glass-panel md:col-span-6 overflow-hidden flex items-center py-2 relative bg-gradient-to-r from-slate-900 to-black text-white border-white/10 card-hover !translate-y-0 !shadow-md h-10">
-    <div class="flex items-center absolute left-0 z-10 bg-gradient-to-r from-slate-900 via-slate-900 to-transparent pr-8 pl-4 h-full">
-      <div class="w-2 h-2 bg-rose-500 rounded-full animate-pulse mr-2 shadow-[0_0_8px_rgba(244,63,94,1)]"></div>
-      <span class="text-[10px] font-bold uppercase tracking-widest text-slate-300">Live</span>
-    </div>
-    <div class="flex whitespace-nowrap animate-ticker pl-[100%] text-sm font-semibold text-slate-300 w-full hover:text-white transition-colors">
-      {#each upcomingDeadlines as d}
-        <span class="mx-8 flex items-center gap-2">
-          <span class="text-amber-500">•</span>
-          {d.title} ({d.subtitle}) - <span class="text-indigo-400">{new Date(d.timestamp).toLocaleDateString()}</span>
-        </span>
-      {/each}
-      {#if upcomingDeadlines.length === 0}
-        <span class="mx-8 flex items-center gap-2">
-          <span class="text-amber-500">•</span>
-          No immediate deadlines. Keep pushing!
-        </span>
-      {/if}
-    </div>
-  </div>
+  
 
   <!-- Bento: Hero (Spans 4 cols on desktop) -->
   <div class="glass-panel md:col-span-4 p-8 relative overflow-hidden group card-hover text-white bg-[#0A0A0A] border-white/10 shadow-2xl flex flex-col justify-center min-h-[220px]">
-    <!-- Animated Gradients -->
-    <div class="absolute -top-32 -left-32 w-96 h-96 bg-indigo-600 rounded-full mix-blend-screen filter blur-[100px] opacity-40 group-hover:scale-110 transition-transform duration-1000"></div>
-    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-rose-600 rounded-full mix-blend-screen filter blur-[100px] opacity-30 group-hover:scale-110 transition-transform duration-1000 delay-100"></div>
     <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E')] opacity-20 mix-blend-overlay pointer-events-none"></div>
 
     <div class="relative z-10">
@@ -384,15 +383,14 @@
             </linearGradient>
           </defs>
           <path d={velocityAreaPath} fill="url(#velocityGradient)" />
-          <path d={velocityChartPath} fill="none" stroke="rgb(99 102 241)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="drop-shadow-md" />
+          <path d={velocityChartPath} fill="none" stroke="rgb(99 102 241)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" pathLength="100" class="eeg-line drop-shadow-md" />
         </svg>
       {/if}
     </div>
   </div>
 
-  <!-- Bento: Metrics Grid (Spans 2 cols) -->
-  <div class="glass-panel md:col-span-2 p-6 card-hover flex flex-col gap-4 min-h-[200px] relative overflow-hidden group">
-    <div class="absolute -top-10 -right-10 w-32 h-32 bg-indigo-400/20 rounded-full mix-blend-screen filter blur-[40px] group-hover:scale-150 transition-transform duration-700"></div>
+  <!-- Bento: Metrics Grid (Spans 3 cols) -->
+  <div class="glass-panel md:col-span-3 p-6 card-hover flex flex-col gap-4 min-h-[200px] relative overflow-hidden group">
     <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 relative z-10">Global Metrics</h3>
     
     <div class="grid grid-cols-2 gap-3 flex-1 relative z-10">
@@ -415,8 +413,8 @@
     </div>
   </div>
 
-  <!-- Bento: Upcoming Deadlines (Spans 2 cols) -->
-  <div class="glass-panel md:col-span-2 p-0 card-hover flex flex-col overflow-hidden min-h-[200px]">
+  <!-- Bento: Upcoming Deadlines (Spans 3 cols) -->
+  <div class="glass-panel md:col-span-3 p-0 card-hover flex flex-col overflow-hidden min-h-[200px]">
     <div class="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-white/[0.02]">
       <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><Calendar size={14} class="text-rose-500" /> Upcoming Deadlines</h3>
     </div>
@@ -440,8 +438,39 @@
     </div>
   </div>
 
-  <!-- Bento: Recent Activity (Spans 2 cols) -->
-  <div class="glass-panel md:col-span-2 p-0 card-hover flex flex-col overflow-hidden min-h-[200px]">
+  <!-- Bento: Focus Radar (Spans 3 cols) -->
+  <div class="glass-panel md:col-span-3 p-6 card-hover relative overflow-hidden bg-slate-900 text-white flex flex-col min-h-[200px] items-center justify-center border-white/10">
+    <h3 class="absolute top-6 left-6 text-[10px] font-bold uppercase tracking-widest text-indigo-400 flex items-center gap-1.5 z-20">
+      <Target size={14} /> Active Radar
+    </h3>
+    
+    <div class="relative w-32 h-32 mt-4">
+      <!-- Radar Rings -->
+      <div class="absolute inset-0 rounded-full border border-indigo-500/30"></div>
+      <div class="absolute inset-4 rounded-full border border-indigo-500/20"></div>
+      <div class="absolute inset-8 rounded-full border border-indigo-500/10"></div>
+      <div class="absolute inset-12 rounded-full border border-indigo-400/50 bg-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.5)]"></div>
+      
+      <!-- Radar Sweeper -->
+      <div class="absolute inset-0 radar-spin rounded-full overflow-hidden z-10" style="background: conic-gradient(from 0deg, transparent 70%, rgba(99,102,241,0.4) 100%); border-right: 2px solid rgb(99,102,241);"></div>
+      
+      <!-- Blips -->
+      {#if jobsInterview > 0}
+        <div class="absolute w-2 h-2 bg-emerald-400 rounded-full top-6 left-8 shadow-[0_0_8px_rgba(52,211,153,1)] z-20 animate-pulse"></div>
+      {/if}
+      {#if collegesSubmitted > 0}
+        <div class="absolute w-2 h-2 bg-rose-400 rounded-full bottom-8 right-6 shadow-[0_0_8px_rgba(251,113,133,1)] z-20 animate-pulse delay-150"></div>
+      {/if}
+      {#if upcomingDeadlines.length > 0}
+        <div class="absolute w-2 h-2 bg-amber-400 rounded-full top-10 right-8 shadow-[0_0_8px_rgba(251,191,36,1)] z-20 animate-pulse delay-300"></div>
+      {/if}
+    </div>
+    
+    <p class="text-xs font-bold text-slate-400 mt-4 text-center">Tracking {activeColleges + jobsApplied} live applications</p>
+  </div>
+
+  <!-- Bento: Recent Activity (Spans 3 cols) -->
+  <div class="glass-panel md:col-span-3 p-0 card-hover flex flex-col overflow-hidden min-h-[200px]">
     <div class="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-white/[0.02]">
       <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><Activity size={14} class="text-emerald-500" /> Recent Activity</h3>
     </div>
