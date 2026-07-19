@@ -110,12 +110,12 @@
       <p class="text-emerald-100/80 text-sm max-w-xl font-medium leading-relaxed mb-6">Track your applications, essays, recommendations, and financial aid deadlines.</p>
       
       <!-- Track Switcher -->
-      <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-4 w-full min-w-0">
         <div class="flex items-center p-1 bg-white/10 backdrop-blur-md rounded-xl w-fit border border-white/10 shadow-inner">
           <button class="px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all bg-white text-[#0A0A0A] shadow-md">Undergraduate</button>
         </div>
         
-        <div class="flex items-center gap-6 px-2 mt-2 overflow-x-auto custom-scroll pb-1">
+        <div class="flex items-center gap-6 px-2 mt-2 overflow-x-auto custom-scroll pb-1 w-full snap-x">
             <button class="shrink-0 text-sm font-bold transition-all {undergradView === 'apps' ? 'text-emerald-400 border-b-2 border-emerald-400 pb-1 -mb-[2px]' : 'text-white/60 hover:text-white pb-1'}" onclick={() => undergradView = 'apps'}>Applications</button>
             <button class="shrink-0 text-sm font-bold transition-all {undergradView === 'activities' ? 'text-emerald-400 border-b-2 border-emerald-400 pb-1 -mb-[2px]' : 'text-white/60 hover:text-white pb-1'}" onclick={() => undergradView = 'activities'}>Common App Activities</button>
             <button class="shrink-0 text-sm font-bold transition-all {undergradView === 'clumper' ? 'text-emerald-400 border-b-2 border-emerald-400 pb-1 -mb-[2px]' : 'text-white/60 hover:text-white pb-1'}" onclick={() => undergradView = 'clumper'}><span class="text-indigo-400">✨</span> Essay Clumper</button>
