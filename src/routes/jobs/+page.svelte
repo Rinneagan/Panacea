@@ -131,7 +131,7 @@
   <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-400 rounded-full mix-blend-screen filter blur-[100px] opacity-30"></div>
 
   <div class="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
-    <div>
+    <div class="min-w-0 flex-1 w-full">
       <p class="text-indigo-400 font-bold tracking-widest uppercase text-xs mb-2 flex items-center gap-2">
         <Briefcase size={14} class="text-blue-400" /> Career Tracking
       </p>
