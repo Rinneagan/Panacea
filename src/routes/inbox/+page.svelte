@@ -68,7 +68,10 @@
       }
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/credential-already-in-use') {
+      if (err.code === 'auth/provider-already-linked') {
+         if (auth.currentUser) await auth.currentUser.reload();
+         error = "We successfully synced your Google connection! Please click 'Connect with Google' one more time to load your inbox.";
+      } else if (err.code === 'auth/credential-already-in-use') {
          error = "This Google account is already used by another user. Try signing in with Google directly.";
       } else if (err.code === 'auth/popup-blocked') {
          error = "Your browser blocked the Google sign-in popup. Please allow popups for this site and try again.";
