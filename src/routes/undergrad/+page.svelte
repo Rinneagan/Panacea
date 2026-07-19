@@ -149,7 +149,7 @@
 </div>
 
 {#if undergradView === 'apps'}
-<section class="flex flex-col gap-6">
+<section class="flex flex-col gap-6 w-full min-w-0">
   <!-- Quicklinks bar -->
   <div class="flex flex-wrap items-center gap-3">
     <span class="text-sm font-bold text-slate-400 uppercase tracking-wider mr-2">Quick links</span>
@@ -172,7 +172,7 @@
       <input type="search" placeholder="Search school or program…" bind:value={searchQuery} class="w-full pl-11 pr-4 py-3 bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 font-medium outline-none" />
     </div>
 
-    <div class="flex items-center gap-2 w-full lg:w-auto px-2 lg:px-0 pb-2 lg:pb-0">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-2 w-full lg:w-auto px-2 lg:px-0 pb-2 lg:pb-0">
       <div class="h-8 w-px bg-slate-200 hidden lg:block mx-2"></div>
       
       <!-- Status Filter -->

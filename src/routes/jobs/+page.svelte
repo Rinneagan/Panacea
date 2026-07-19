@@ -163,7 +163,7 @@
   </div>
 </div>
 
-<section class="flex flex-col gap-6">
+<section class="flex flex-col gap-6 w-full min-w-0">
   <!-- Toolbar -->
   <div class="flex flex-col lg:flex-row gap-4 items-center bg-white/50 backdrop-blur-md p-2 rounded-2xl border border-slate-200/60 shadow-sm">
     <div class="relative flex-1 w-full">
@@ -171,7 +171,7 @@
       <input type="search" placeholder="Search company or role…" bind:value={searchQuery} class="w-full pl-11 pr-4 py-3 bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 font-medium outline-none" />
     </div>
 
-    <div class="flex items-center gap-2 w-full lg:w-auto px-2 lg:px-0 pb-2 lg:pb-0">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-2 w-full lg:w-auto px-2 lg:px-0 pb-2 lg:pb-0">
       <div class="h-8 w-px bg-slate-200 hidden lg:block mx-2"></div>
       
       <!-- Status Filter -->
