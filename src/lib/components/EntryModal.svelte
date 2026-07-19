@@ -963,9 +963,9 @@
               {/if}
             </div>
           {:else}
+            {@const searchUrl = entry.portalLink || `https://www.google.com/search?igu=1&q=${encodeURIComponent((entry.school || entry.company || 'College Application') + ' admissions')}`}
             <!-- Mini Browser Tab -->
             <div class="flex-1 flex flex-col relative min-h-[350px]">
-              {@const searchUrl = entry.portalLink || `https://www.google.com/search?igu=1&q=${encodeURIComponent((entry.school || entry.company || 'College Application') + ' admissions')}`}
               <div class="flex justify-between items-center mb-3">
                 <span class="text-xs text-slate-500 font-medium truncate pr-2" title={searchUrl}>{searchUrl.startsWith('https://www.google.com') ? 'Google Search' : searchUrl}</span>
                 <a href={searchUrl} target="_blank" rel="noopener" class="shrink-0 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors shadow-sm border border-indigo-100 dark:border-indigo-500/20">Open ↗</a>

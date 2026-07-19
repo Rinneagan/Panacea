@@ -5,7 +5,7 @@
   import { Search, Briefcase, GraduationCap, FileText, Settings, Moon, Sun } from '@lucide/svelte';
 
   let query = $state('');
-  let inputElement: HTMLInputElement;
+  let inputElement = $state<HTMLInputElement>();
   let selectedIndex = $state(0);
   
   // Close when clicking outside
