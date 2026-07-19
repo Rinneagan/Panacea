@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { gmailAccessToken, appData } from '$lib/stores';
   import { auth, googleProvider } from '$lib/firebase';
-  import { signInWithPopup, GoogleAuthProvider, linkWithPopup } from 'firebase/auth';
+  import { signInWithRedirect, getRedirectResult, GoogleAuthProvider, linkWithRedirect } from 'firebase/auth';
   import { Mail, Search, RefreshCw, PenSquare, ArrowLeft, MoreVertical, Archive, Trash2, Reply, Paperclip } from '@lucide/svelte';
   import ComposeEmailModal from '$lib/components/ComposeEmailModal.svelte';
 
@@ -54,27 +54,14 @@
       }
 
       if (auth.currentUser && !isLinked) {
-        result = await linkWithPopup(auth.currentUser, googleProvider);
+        await linkWithRedirect(auth.currentUser, googleProvider);
       } else {
-        result = await signInWithPopup(auth, googleProvider);
-      }
-      
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential && credential.accessToken) {
-        gmailAccessToken.set(credential.accessToken);
-        await fetchInbox();
-      } else {
-        error = 'Authentication successful, but Google did not return an Access Token. Please try again.';
+        await signInWithRedirect(auth, googleProvider);
       }
     } catch (err: any) {
-      console.error(err);
       if (err.code === 'auth/provider-already-linked') {
          if (auth.currentUser) await auth.currentUser.reload();
-         error = "We successfully synced your Google connection! Please click 'Connect with Google' one more time to load your inbox.";
-      } else if (err.code === 'auth/credential-already-in-use') {
-         error = "This Google account is already used by another user. Try signing in with Google directly.";
-      } else if (err.code === 'auth/popup-blocked') {
-         error = "Your browser blocked the Google sign-in popup. Please allow popups for this site and try again.";
+         await signInWithRedirect(auth, googleProvider);
       } else {
          error = err.message;
       }
@@ -200,9 +187,26 @@
     return match ? match[1].replace(/"/g, '') : fromStr;
   }
 
-  onMount(() => {
-    if ($gmailAccessToken) {
-      fetchInbox();
+  onMount(async () => {
+    try {
+      const result = await getRedirectResult(auth);
+      if (result) {
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        if (credential && credential.accessToken) {
+          gmailAccessToken.set(credential.accessToken);
+          await fetchInbox();
+        } else {
+          error = 'Authentication successful, but Google did not return an Access Token. Please try again.';
+        }
+      } else if ($gmailAccessToken) {
+        fetchInbox();
+      }
+    } catch (err: any) {
+      if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/provider-already-linked') {
+         await signInWithRedirect(auth, googleProvider);
+      } else {
+        error = err.message;
+      }
     }
   });
 </script>
