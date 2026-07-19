@@ -1,22 +1,7 @@
 <script lang="ts">
   import { auth, googleProvider } from '$lib/firebase';
-  import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
+  import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
   import { gmailAccessToken } from '$lib/stores';
-  import { onMount } from 'svelte';
-
-  onMount(async () => {
-    try {
-      const result = await getRedirectResult(auth);
-      if (result) {
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        if (credential && credential.accessToken) {
-          gmailAccessToken.set(credential.accessToken);
-        }
-      }
-    } catch (err) {
-      authError = friendlyAuthError(err);
-    }
-  });
 
   let isSignUpMode = $state(false);
   let email = $state('');
@@ -63,9 +48,14 @@
     authError = '';
     loading = true;
     try {
-      await signInWithRedirect(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential && credential.accessToken) {
+        gmailAccessToken.set(credential.accessToken);
+      }
     } catch (err) {
       authError = friendlyAuthError(err);
+    } finally {
       loading = false;
     }
   }

@@ -21,5 +21,10 @@ export default defineConfig({
 	],
 	ssr: {
 		noExternal: ['@lucide/svelte']
+	},
+	server: {
+		headers: {
+			'Cross-Origin-Opener-Policy': 'same-origin-allow-popups'
+		}
 	}
 });

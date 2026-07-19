@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { gmailAccessToken, appData } from '$lib/stores';
   import { auth, googleProvider } from '$lib/firebase';
-  import { signInWithRedirect, getRedirectResult, GoogleAuthProvider, linkWithRedirect } from 'firebase/auth';
+  import { signInWithPopup, GoogleAuthProvider, linkWithPopup } from 'firebase/auth';
   import { Mail, Search, RefreshCw, PenSquare, ArrowLeft, MoreVertical, Archive, Trash2, Reply, Paperclip } from '@lucide/svelte';
   import ComposeEmailModal from '$lib/components/ComposeEmailModal.svelte';
 
@@ -47,24 +47,31 @@
     connecting = true;
     error = '';
     try {
+      let result;
       if (auth.currentUser) {
-        await linkWithRedirect(auth.currentUser, googleProvider);
+        // Try to link the Google credential if they are logged in with email/pass
+        result = await linkWithPopup(auth.currentUser, googleProvider).catch(async (e) => {
+          if (e.code === 'auth/credential-already-in-use') {
+             return await signInWithPopup(auth, googleProvider);
+          }
+          throw e;
+        });
       } else {
-        await signInWithRedirect(auth, googleProvider);
+        result = await signInWithPopup(auth, googleProvider);
+      }
+      
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential && credential.accessToken) {
+        gmailAccessToken.set(credential.accessToken);
+        await fetchInbox();
+      } else {
+        error = 'Authentication successful, but Google did not return an Access Token. Please try again.';
       }
     } catch (err: any) {
-      if (err.code === 'auth/provider-already-linked' || err.code === 'auth/credential-already-in-use') {
-        try {
-          await signInWithRedirect(auth, googleProvider);
-        } catch(e: any) {
-          error = e.message;
-          connecting = false;
-        }
-      } else {
-        console.error(err);
-        error = err.message;
-        connecting = false;
-      }
+      console.error(err);
+      error = err.message;
+    } finally {
+      connecting = false;
     }
   }
 
@@ -185,26 +192,9 @@
     return match ? match[1].replace(/"/g, '') : fromStr;
   }
 
-  onMount(async () => {
-    try {
-      const result = await getRedirectResult(auth);
-      if (result) {
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        if (credential && credential.accessToken) {
-          gmailAccessToken.set(credential.accessToken);
-          await fetchInbox();
-        } else {
-          error = 'Authentication successful, but Google did not return an Access Token. Please try again.';
-        }
-      } else if ($gmailAccessToken) {
-        fetchInbox();
-      }
-    } catch (err: any) {
-      if (err.code === 'auth/credential-already-in-use') {
-         await signInWithRedirect(auth, googleProvider);
-      } else {
-        error = err.message;
-      }
+  onMount(() => {
+    if ($gmailAccessToken) {
+      fetchInbox();
     }
   });
 </script>
