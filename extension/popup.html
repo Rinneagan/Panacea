@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { width: 320px; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0A0A0A; color: white; margin: 0; }
+    button { width: 100%; padding: 14px; background: white; color: black; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 14px; box-shadow: 0 4px 12px rgba(255,255,255,0.1); }
+    button:hover { transform: scale(1.02); background: #f8f9fa; }
+    h3 { margin-top: 0; margin-bottom: 6px; font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+    p { font-size: 13px; color: #a1a1aa; margin-bottom: 20px; line-height: 1.4; }
+    .status { font-size: 11px; text-align: center; color: #52525b; margin-top: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  </style>
+</head>
+<body>
+  <h3>Panacea Web Clipper</h3>
+  <p>Instantly extract the company, role, and URL from this page and send it to your tracker.</p>
+  <button id="saveBtn">Save to Panacea Tracker</button>
+  <div class="status" id="statusText">Ready</div>
+  <script src="popup.js"></script>
+</body>
+</html>

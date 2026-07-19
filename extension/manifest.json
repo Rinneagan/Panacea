@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Panacea Web Clipper",
+  "version": "1.0",
+  "description": "Instantly save jobs from LinkedIn, Greenhouse, and Lever directly to your Panacea tracker.",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Save to Panacea"
+  }
+}
