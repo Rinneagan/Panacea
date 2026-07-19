@@ -91,7 +91,7 @@
 <svelte:window onclick={() => openDropdownId = null} />
 
 <div class="max-w-5xl mx-auto pb-8 fade-in">
-  <div class="flex justify-between items-end mb-8">
+  <div class="flex flex-col sm:flex-row justify-between sm:items-end gap-4 mb-8">
     <div>
       <h1 class="text-3xl font-extrabold text-black dark:text-white tracking-tight mb-2">Common App Activities</h1>
       <p class="text-slate-500 font-medium">Craft and order your maximum of 10 extracurriculars. Strict character limits applied.</p>

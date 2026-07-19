@@ -72,7 +72,7 @@
 
 <div class="h-full flex flex-col fade-in max-w-7xl mx-auto px-4 pb-8">
   <!-- Header -->
-  <header class="flex items-center justify-between mb-8 mt-4">
+  <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 mt-4">
     <div>
       <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
         <Scale class="text-indigo-500" size={32} />

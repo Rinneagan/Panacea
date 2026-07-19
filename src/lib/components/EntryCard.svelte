@@ -30,10 +30,11 @@
   let sv = $derived(statusVariant(entry.status));
   let followUpNeeded = $derived(needsFollowUp(entry));
 
-  import { appData, saveUserData } from '$lib/stores';
+  import { appData, saveUserData, modalState } from '$lib/stores';
   import { Archive } from '@lucide/svelte';
 
-  function handleArchive() {
+  function handleArchive(e: Event) {
+    e.stopPropagation();
     if (isJob) {
       const idx = $appData.jobs.findIndex(j => j.id === entry.id);
       if (idx >= 0) $appData.jobs[idx].archived = !$appData.jobs[idx].archived;
@@ -43,17 +44,28 @@
     }
     saveUserData();
   }
+
+  function openModal() {
+    modalState.set({
+      isOpen: true,
+      type,
+      editId: entry.id,
+      degreeType: entry.degreeType
+    });
+  }
 </script>
 
 <div class="glass-panel card-hover p-5 sm:p-6 transition-all duration-300 relative group {isSelected ? 'ring-2 ring-indigo-500 bg-indigo-50/30' : ''}" style="animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: {Math.min(index || 0, 12) * 40}ms">
   
   <div class="flex items-start gap-4">
     <!-- Checkbox -->
-    <button aria-label="Select {title}" class="mt-1 flex-shrink-0 w-6 h-6 rounded-md border-2 transition-all flex items-center justify-center {isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 hover:border-indigo-400 text-transparent'}" onclick={() => toggleSelect(entry.id)}>
+    <button aria-label="Select {title}" class="mt-1 flex-shrink-0 w-6 h-6 rounded-md border-2 transition-all flex items-center justify-center {isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 hover:border-indigo-400 text-transparent'}" onclick={(e) => { e.stopPropagation(); toggleSelect(entry.id); }}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polyline points="20 6 9 17 4 12"></polyline></svg>
     </button>
     
-    <div class="flex-1 min-w-0">
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="flex-1 min-w-0 cursor-pointer" onclick={openModal}>
       <div class="flex items-start justify-between gap-4">
         <div class="min-w-0 flex-1">
           <h3 class="text-xl font-bold text-slate-900 truncate pr-2" title={title}>{title || 'Untitled'}</h3>
@@ -61,7 +73,7 @@
             <p class="text-sm font-medium text-slate-500 mt-1 truncate pr-2">{sub}</p>
           {/if}
         </div>
-        <button aria-label="Toggle Star" class="flex-shrink-0 p-2 -mt-2 -mr-2 rounded-xl transition-all {entry.starred ? 'text-amber-400 bg-amber-50 hover:bg-amber-100' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'}">
+        <button aria-label="Toggle Star" class="flex-shrink-0 p-2 -mt-2 -mr-2 rounded-xl transition-all {entry.starred ? 'text-amber-400 bg-amber-50 hover:bg-amber-100' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'}" onclick={(e) => { e.stopPropagation(); entry.starred = !entry.starred; saveUserData(); }}>
           <Star class={entry.starred ? "fill-current" : ""} size={20} />
         </button>
       </div>
@@ -116,7 +128,7 @@
       <!-- Links & Integrations -->
       <div class="mt-4 flex flex-wrap gap-2">
         {#each links() as link}
-          <a href={ensureUrl(link.url)} target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#222] border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all shadow-sm">
+          <a href={ensureUrl(link.url)} target="_blank" rel="noopener" onclick={(e) => e.stopPropagation()} class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#222] border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all shadow-sm">
             {#if link.label === 'Posting'}
               <ExternalLink size={14} />
             {:else}
@@ -127,7 +139,7 @@
         {/each}
         
         <!-- Smart Email Search -->
-        <a href="https://mail.google.com/mail/u/0/#search/{encodeURIComponent(title || '')}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#222] border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-rose-500 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all shadow-sm" title="Search Gmail for {title}">
+        <a href="https://mail.google.com/mail/u/0/#search/{encodeURIComponent(title || '')}" target="_blank" rel="noopener" onclick={(e) => e.stopPropagation()} class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#222] border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-rose-500 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all shadow-sm" title="Search Gmail for {title}">
           <Mail size={14} />
           Find in Gmail
         </a>
