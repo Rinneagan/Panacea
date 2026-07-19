@@ -48,14 +48,13 @@
     error = '';
     try {
       let result;
+      let isLinked = false;
       if (auth.currentUser) {
-        // Try to link the Google credential if they are logged in with email/pass
-        result = await linkWithPopup(auth.currentUser, googleProvider).catch(async (e) => {
-          if (e.code === 'auth/credential-already-in-use') {
-             return await signInWithPopup(auth, googleProvider);
-          }
-          throw e;
-        });
+        isLinked = auth.currentUser.providerData.some(p => p.providerId === 'google.com');
+      }
+
+      if (auth.currentUser && !isLinked) {
+        result = await linkWithPopup(auth.currentUser, googleProvider);
       } else {
         result = await signInWithPopup(auth, googleProvider);
       }
@@ -69,7 +68,13 @@
       }
     } catch (err: any) {
       console.error(err);
-      error = err.message;
+      if (err.code === 'auth/credential-already-in-use') {
+         error = "This Google account is already used by another user. Try signing in with Google directly.";
+      } else if (err.code === 'auth/popup-blocked') {
+         error = "Your browser blocked the Google sign-in popup. Please allow popups for this site and try again.";
+      } else {
+         error = err.message;
+      }
     } finally {
       connecting = false;
     }
