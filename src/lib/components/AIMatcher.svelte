@@ -109,6 +109,22 @@
   }
 </script>
 
+<style>
+  @keyframes sortingHatThink {
+    0%, 100% { 
+      transform: rotate(-5deg) scale(1); 
+      filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.4)); 
+    }
+    50% { 
+      transform: rotate(5deg) scale(1.15); 
+      filter: drop-shadow(0 0 12px rgba(251, 191, 36, 1)); 
+    }
+  }
+  .animate-sorting-hat {
+    animation: sortingHatThink 1.2s ease-in-out infinite;
+  }
+</style>
+
 <div class="max-w-4xl mx-auto space-y-8 fade-in">
   <!-- Input Section -->
   <div class="glass-panel p-8">
@@ -141,7 +157,13 @@
 
     <button onclick={generateMatches} disabled={!major || isGenerating} class="w-full btn-primary py-3 flex items-center justify-center gap-2 {(!major || isGenerating) ? 'opacity-50 cursor-not-allowed' : ''}">
       {#if isGenerating}
-        <Sparkles size={18} class="animate-spin" /> Analyzing 4,000+ US Colleges...
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 animate-sorting-hat text-amber-400">
+          <path d="M4 18s4-2 8-2 8 2 8 2" />
+          <path d="M6 18l2-8c1-4 3-6 4-6s1.5 2 2.5 5c1 3 1.5 6 1.5 9" />
+          <path d="M10 12c1 .5 3 .5 4 0" />
+          <path d="M11 15c.5.5 1.5.5 2 0" />
+        </svg>
+        Consulting the Sorting Hat...
       {:else}
         <Sparkles size={18} /> Find My Matches
       {/if}
