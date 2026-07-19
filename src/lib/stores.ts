@@ -8,7 +8,7 @@ export const userStore = writable<User | null>(null);
 export const authLoading = writable(true);
 export const appData = writable<AppState>({ jobs: [], colleges: [], quickLinks: [], docs: [], vaultStories: [], networkingContacts: [] });
 export const modalState = writable<{ isOpen: boolean; type: 'job' | 'college'; editId: string | null; degreeType?: 'Undergrad' | 'PhD' }>({ isOpen: false, type: 'job', editId: null });
-export const layoutState = writable({ isSidebarCollapsed: false, isSettingsOpen: false, isCommandPaletteOpen: false });
+export const layoutState = writable({ isSidebarCollapsed: false, isSettingsOpen: false, isCommandPaletteOpen: false, isMobileMenuOpen: false });
 export const activeDocId = writable<string | null>(null);
 
 // Will hold the access token for the active session if they've granted Gmail permissions

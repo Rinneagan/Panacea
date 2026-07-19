@@ -148,8 +148,8 @@
                   <th class="p-4 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111] min-w-[200px] border-l">
                     <div class="flex items-center justify-between">
                       <div>
-                        <p class="font-black text-lg text-slate-900 dark:text-white truncate">{mode === 'job' ? item.company : item.school}</p>
-                        <p class="text-xs text-slate-500 font-medium truncate">{mode === 'job' ? item.role : item.program}</p>
+                        <p class="font-black text-lg text-slate-900 dark:text-white truncate">{mode === 'job' ? (item as any).company : (item as any).school}</p>
+                        <p class="text-xs text-slate-500 font-medium truncate">{mode === 'job' ? (item as any).role : (item as any).program}</p>
                       </div>
                       <button class="text-slate-400 hover:text-rose-500 p-1" onclick={() => mode === 'job' ? toggleJob(item.id) : toggleCollege(item.id)}>
                         <Trash2 size={14} />

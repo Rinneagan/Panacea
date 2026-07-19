@@ -167,7 +167,7 @@
     programSuggestions = [];
   }
 
-  let activeTab = $state<'details' | 'ats'>('details');
+  let activeTab = $state<'details' | 'ats' | 'supps' | 'advice'>('details');
 
   // ATS Logic
   let atsScore = $state(0);
@@ -528,9 +528,15 @@
               <button class="text-sm font-bold tracking-tight transition-colors {activeTab === 'details' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 -mb-[3px] pb-2' : 'text-slate-500 hover:text-black dark:hover:text-white pb-2'}" onclick={() => activeTab = 'details'}>Application Details</button>
               <button class="text-sm font-bold tracking-tight transition-colors {activeTab === 'ats' ? 'text-rose-600 dark:text-rose-400 border-b-2 border-rose-600 dark:border-rose-400 -mb-[3px] pb-2' : 'text-slate-500 hover:text-black dark:hover:text-white pb-2'}" onclick={() => activeTab = 'ats'}>ATS Resume Matcher</button>
             </div>
+          {:else}
+            <div class="flex items-center gap-6 mb-6 border-b border-slate-200 dark:border-white/10 pb-2">
+              <button class="text-sm font-bold tracking-tight transition-colors {activeTab === 'details' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 -mb-[3px] pb-2' : 'text-slate-500 hover:text-black dark:hover:text-white pb-2'}" onclick={() => activeTab = 'details'}>Application Details</button>
+              <button class="text-sm font-bold tracking-tight transition-colors {activeTab === 'supps' ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-600 dark:border-emerald-400 -mb-[3px] pb-2' : 'text-slate-500 hover:text-black dark:hover:text-white pb-2'}" onclick={() => activeTab = 'supps'}>Supplemental Essays</button>
+              <button class="text-sm font-bold tracking-tight transition-colors {activeTab === 'advice' ? 'text-amber-500 border-b-2 border-amber-500 -mb-[3px] pb-2' : 'text-slate-500 hover:text-black dark:hover:text-white pb-2'}" onclick={() => activeTab = 'advice'}><span class="mr-1">✨</span> Optimize Strategy</button>
+            </div>
           {/if}
 
-          {#if activeTab === 'details' || type !== 'job'}
+          {#if activeTab === 'details'}
             <div class="form-grid">
             {#if type === 'job'}
               <div class="form-field full flex flex-wrap gap-2">
@@ -751,7 +757,7 @@
               <div id="em-notes" bind:this={editorNode} class="min-h-[300px] bg-white dark:bg-[#1A1A1A] rounded-xl border border-slate-200 dark:border-white/10"></div>
             </div>
             </div>
-          {:else}
+          {:else if activeTab === 'ats'}
             <!-- ATS Matcher View -->
             <div class="flex flex-col gap-6 fade-in">
               <div class="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl p-5 flex items-start gap-4">
@@ -871,6 +877,65 @@
                     </div>
                   {/if}
                 </div>
+              </div>
+            </div>
+          {:else if activeTab === 'supps'}
+            <div class="flex flex-col gap-6 fade-in">
+              <div class="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl p-5 flex items-start gap-4">
+                <div class="w-10 h-10 shrink-0 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
+                  <FilePenLine size={20} />
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-emerald-900 dark:text-emerald-300">Supplemental Essays</h3>
+                  <p class="text-xs font-medium text-emerald-700/80 dark:text-emerald-400 mt-1 leading-relaxed">Here are the exact supplemental essay prompts required for {entry.school || 'this school'}. Draft and save your responses directly below each prompt.</p>
+                </div>
+              </div>
+
+              {#if entry.supps && entry.supps.length > 0}
+                <div class="space-y-6">
+                  {#each entry.supps as supp}
+                    <div class="bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden">
+                      <div class="p-4 bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
+                        <p class="text-sm font-bold text-slate-800 dark:text-white leading-relaxed">{supp.prompt}</p>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-indigo-500 mt-2">Max {supp.wordLimit} Words</p>
+                      </div>
+                      <div class="p-4 relative">
+                        <textarea bind:value={supp.draft} placeholder="Start writing your draft..." class="w-full min-h-[150px] bg-transparent border-none focus:ring-0 text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 resize-y custom-scroll"></textarea>
+                        <div class="absolute bottom-3 right-4">
+                          <span class="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-white/10 px-2 py-1 rounded-md">{supp.draft ? supp.draft.trim().split(/\s+/).length : 0} / {supp.wordLimit} words</span>
+                        </div>
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              {:else}
+                <div class="flex-1 flex flex-col items-center justify-center text-center p-12 bg-slate-50 dark:bg-white/5 border border-dashed border-slate-200 dark:border-white/10 rounded-3xl mt-4">
+                  <Check size={32} class="text-slate-400 mb-3" />
+                  <p class="text-sm font-bold text-slate-700 dark:text-slate-300">No Supplemental Essays</p>
+                  <p class="text-xs text-slate-500 mt-2 font-medium">This school does not require any additional writing supplements.</p>
+                </div>
+              {/if}
+            </div>
+          {:else if activeTab === 'advice'}
+            <div class="flex flex-col gap-6 fade-in">
+              <div class="bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-2xl p-6 relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-amber-400 rounded-full mix-blend-screen filter blur-[50px] opacity-20"></div>
+                
+                <h3 class="text-xl font-black text-amber-900 dark:text-amber-300 mb-4 flex items-center gap-2">
+                  <Sparkles size={20} class="text-amber-500" /> Optimize Strategy
+                </h3>
+                
+                <div class="bg-white/50 dark:bg-black/20 backdrop-blur-md rounded-xl p-5 border border-amber-200/50 dark:border-amber-500/20 shadow-inner">
+                  {#if entry.aiAdvice}
+                    <p class="text-sm font-medium text-amber-900 dark:text-amber-200 leading-relaxed">{entry.aiAdvice}</p>
+                  {:else}
+                    <p class="text-sm font-medium text-amber-900/60 dark:text-amber-200/60 italic leading-relaxed">No specific AI advice generated for this school yet. Use the AI Matcher or click "Optimize Strategy" to generate actionable insights.</p>
+                  {/if}
+                </div>
+                
+                <button type="button" class="mt-6 w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all" onclick={() => alert('Strategy Optimized! (Simulated)')}>
+                  <Sparkles size={16} /> Re-Calculate Strategy
+                </button>
               </div>
             </div>
           {/if}

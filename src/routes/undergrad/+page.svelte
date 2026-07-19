@@ -4,11 +4,12 @@
   import AIAssistant from '$lib/components/AIAssistant.svelte';
   import CAActivities from '$lib/components/CAActivities.svelte';
   import EssayClumper from '$lib/components/EssayClumper.svelte';
+  import AIMatcher from '$lib/components/AIMatcher.svelte';
   import EntryCard from '$lib/components/EntryCard.svelte';
   import KanbanBoard from '$lib/components/KanbanBoard.svelte';
   
-  let activeTrack = 'Undergrad';
-  let undergradView = $state<'apps' | 'activities' | 'clumper'>('apps');
+  let activeTrack: 'Undergrad' | 'PhD' = 'Undergrad';
+  let undergradView = $state<'apps' | 'activities' | 'clumper' | 'matcher'>('apps');
   let trackColleges = $derived($appData.colleges.filter(c => (c.degreeType || 'Undergrad') === 'Undergrad'));
 
   let activeColleges = $derived(trackColleges.filter(c => !['Accepted', 'Rejected', 'Enrolled'].includes(c.status)).length);
@@ -118,6 +119,7 @@
             <button class="shrink-0 text-sm font-bold transition-all {undergradView === 'apps' ? 'text-emerald-400 border-b-2 border-emerald-400 pb-1 -mb-[2px]' : 'text-white/60 hover:text-white pb-1'}" onclick={() => undergradView = 'apps'}>Applications</button>
             <button class="shrink-0 text-sm font-bold transition-all {undergradView === 'activities' ? 'text-emerald-400 border-b-2 border-emerald-400 pb-1 -mb-[2px]' : 'text-white/60 hover:text-white pb-1'}" onclick={() => undergradView = 'activities'}>Common App Activities</button>
             <button class="shrink-0 text-sm font-bold transition-all {undergradView === 'clumper' ? 'text-emerald-400 border-b-2 border-emerald-400 pb-1 -mb-[2px]' : 'text-white/60 hover:text-white pb-1'}" onclick={() => undergradView = 'clumper'}><span class="text-indigo-400">✨</span> Essay Clumper</button>
+            <button class="shrink-0 text-sm font-bold transition-all {undergradView === 'matcher' ? 'text-emerald-400 border-b-2 border-emerald-400 pb-1 -mb-[2px]' : 'text-white/60 hover:text-white pb-1'}" onclick={() => undergradView = 'matcher'}><span class="text-amber-400">✨</span> AI Matcher</button>
         </div>
       </div>
       
@@ -261,6 +263,8 @@
 </section>
 {:else if undergradView === 'activities'}
   <CAActivities />
+{:else if undergradView === 'matcher'}
+  <AIMatcher />
 {:else}
   <EssayClumper />
 {/if}

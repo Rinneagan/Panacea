@@ -86,11 +86,19 @@ export interface ResumeEducation {
   bullets: string[];
 }
 
+export interface SupplementalEssay {
+  id: string;
+  prompt: string;
+  wordLimit: number;
+  draft: string;
+}
+
 export interface JobApplication extends BaseApplication {
   company: string;
   role?: string;
   location?: string;
   appliedDate?: string;
+  salary?: string;
   jobLink?: string;
   networkingNotes?: string;
   interviewPrep?: string;
@@ -127,6 +135,8 @@ export interface CollegeApplication extends BaseApplication {
   fundingApp?: boolean;
 
   offerDetails?: CollegeOfferDetails;
+  aiAdvice?: string;
+  supps?: SupplementalEssay[];
 }
 
 export interface QuickLink {

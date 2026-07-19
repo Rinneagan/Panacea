@@ -7,7 +7,7 @@
   import EntryCard from '$lib/components/EntryCard.svelte';
   import KanbanBoard from '$lib/components/KanbanBoard.svelte';
   
-  let activeTrack = 'PhD';
+  let activeTrack: 'Undergrad' | 'PhD' = 'PhD';
   let trackColleges = $derived($appData.colleges.filter(c => c.degreeType === 'PhD'));
 
   let activeColleges = $derived(trackColleges.filter(c => !['Accepted', 'Rejected', 'Enrolled'].includes(c.status)).length);
