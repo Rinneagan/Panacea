@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { gmailAccessToken, appData } from '$lib/stores';
   import { auth, googleProvider } from '$lib/firebase';
-  import { signInWithPopup, GoogleAuthProvider, linkWithPopup } from 'firebase/auth';
+  import { signInWithRedirect, getRedirectResult, GoogleAuthProvider, linkWithRedirect } from 'firebase/auth';
   import { Mail, Search, RefreshCw, PenSquare, ArrowLeft, MoreVertical, Archive, Trash2, Reply, Paperclip } from '@lucide/svelte';
   import ComposeEmailModal from '$lib/components/ComposeEmailModal.svelte';
 
@@ -47,28 +47,14 @@
     connecting = true;
     error = '';
     try {
-      let result;
       if (auth.currentUser) {
-        // Try to link the Google credential if they are logged in with email/pass
-        result = await linkWithPopup(auth.currentUser, googleProvider).catch(async (e) => {
-          if (e.code === 'auth/credential-already-in-use') {
-             return await signInWithPopup(auth, googleProvider);
-          }
-          throw e;
-        });
+        await linkWithRedirect(auth.currentUser, googleProvider);
       } else {
-        result = await signInWithPopup(auth, googleProvider);
-      }
-      
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential && credential.accessToken) {
-        gmailAccessToken.set(credential.accessToken);
-        await fetchInbox();
+        await signInWithRedirect(auth, googleProvider);
       }
     } catch (err: any) {
       console.error(err);
       error = err.message;
-    } finally {
       connecting = false;
     }
   }
@@ -189,9 +175,24 @@
     return match ? match[1].replace(/"/g, '') : fromStr;
   }
 
-  onMount(() => {
-    if ($gmailAccessToken) {
-      fetchInbox();
+  onMount(async () => {
+    try {
+      const result = await getRedirectResult(auth);
+      if (result) {
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        if (credential && credential.accessToken) {
+          gmailAccessToken.set(credential.accessToken);
+          await fetchInbox();
+        }
+      } else if ($gmailAccessToken) {
+        fetchInbox();
+      }
+    } catch (err: any) {
+      if (err.code === 'auth/credential-already-in-use') {
+         await signInWithRedirect(auth, googleProvider);
+      } else {
+        error = err.message;
+      }
     }
   });
 </script>
