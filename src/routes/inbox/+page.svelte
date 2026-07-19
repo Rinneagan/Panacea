@@ -53,9 +53,18 @@
         await signInWithRedirect(auth, googleProvider);
       }
     } catch (err: any) {
-      console.error(err);
-      error = err.message;
-      connecting = false;
+      if (err.code === 'auth/provider-already-linked' || err.code === 'auth/credential-already-in-use') {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+        } catch(e: any) {
+          error = e.message;
+          connecting = false;
+        }
+      } else {
+        console.error(err);
+        error = err.message;
+        connecting = false;
+      }
     }
   }
 
