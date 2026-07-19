@@ -89,11 +89,12 @@
       });
       
       if (!res.ok) {
+        const errorText = await res.text();
         if (res.status === 401) {
           gmailAccessToken.set(null); // Token expired
-          throw new Error('Session expired. Please reconnect Gmail.');
+          throw new Error('Session expired: ' + errorText);
         }
-        throw new Error('Failed to fetch messages');
+        throw new Error('Failed to fetch messages (Status ' + res.status + '): ' + errorText);
       }
 
       const data = await res.json();
@@ -192,6 +193,8 @@
         if (credential && credential.accessToken) {
           gmailAccessToken.set(credential.accessToken);
           await fetchInbox();
+        } else {
+          error = 'Authentication successful, but Google did not return an Access Token. Please try again.';
         }
       } else if ($gmailAccessToken) {
         fetchInbox();
