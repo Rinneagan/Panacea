@@ -185,6 +185,11 @@ export interface NetworkingContact {
   notes?: string;
   lastContactDate?: number;
   createdAt: number;
+  // Faculty-research provenance (optional, backward-compatible)
+  source?: 'manual' | 'research';
+  profileUrl?: string;       // faculty page, ORCID, or OpenAlex profile
+  researchArea?: string;     // primary research topics, comma-separated
+  emailStatus?: 'manual' | 'verified' | 'unverified';
 }
 
 export interface AppState {

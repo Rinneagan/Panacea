@@ -25,17 +25,28 @@
     isGenerating = true;
     hasGenerated = false;
 
-    // Simulate AI loading delay
     setTimeout(() => {
-      // Return a random subset
       const shuffled = [...MOCK_PHDS].sort(() => 0.5 - Math.random());
       generatedResults = shuffled.slice(0, 5);
       isGenerating = false;
       hasGenerated = true;
-    }, 2000);
+    }, 1500);
   }
 
   function addPhD(phd: typeof MOCK_PHDS[0]) {
+    const strategyObj = {
+      category: 'Top Tier PhD Program (Fully Funded)',
+      school: phd.school,
+      program: phd.department + ' (' + phd.focus + ')',
+      hook: `Focus on your research trajectory in ${field || phd.focus}. Highlight past publications, code repositories, or lab projects that demonstrate direct methodology fit with ${phd.prof}'s active research group.`,
+      essayFocus: `In your Statement of Purpose for ${phd.school}, dedicate a dedicated paragraph to ${phd.prof}'s recent work in ${phd.focus}. Connect your research interests directly to their ongoing grants.`,
+      actionChecklist: [
+        `Send a cold email inquiry to ${phd.prof} regarding PhD openings`,
+        `Tailor Statement of Purpose to ${phd.school}'s ${phd.department} lab requirements`,
+        `Request 3 strong academic letters of recommendation`
+      ]
+    };
+
     const newApp = {
       id: crypto.randomUUID(),
       school: phd.school,
@@ -45,7 +56,7 @@
       degreeType: 'PhD' as const,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      aiAdvice: `For your interest in ${field}, specifically look into ${phd.prof}'s recent publications in ${phd.focus}. Mention their paper from last year in your Statement of Purpose to show fit.`,
+      aiAdvice: JSON.stringify(strategyObj),
       supps: [
         { id: crypto.randomUUID(), prompt: "Statement of Purpose: Describe your research interests, academic background, and why you are applying to this program.", wordLimit: 1000, draft: "" },
         { id: crypto.randomUUID(), prompt: "Personal Statement: How have your background and life experiences contributed to your decision to pursue a graduate degree?", wordLimit: 500, draft: "" }
@@ -57,7 +68,6 @@
   }
 
   function isAdded(school: string, program: string) {
-    const derivedProgram = program + ' (' + MOCK_PHDS.find(p => p.school === school)?.focus + ')';
     return $appData.colleges.some(c => c.school === school && c.degreeType === 'PhD');
   }
 </script>
@@ -103,13 +113,8 @@
 
     <button onclick={generateMatches} disabled={!field || isGenerating} class="w-full btn-primary py-3 flex items-center justify-center gap-2 {(!field || isGenerating) ? 'opacity-50 cursor-not-allowed' : ''}">
       {#if isGenerating}
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 animate-sorting-hat text-amber-400">
-          <path d="M4 18s4-2 8-2 8 2 8 2" />
-          <path d="M6 18l2-8c1-4 3-6 4-6s1.5 2 2.5 5c1 3 1.5 6 1.5 9" />
-          <path d="M10 12c1 .5 3 .5 4 0" />
-          <path d="M11 15c.5.5 1.5.5 2 0" />
-        </svg>
-        Consulting the Sorting Hat...
+        <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+        Matching Research Labs...
       {:else}
         <Sparkles size={18} /> Find Labs & PIs
       {/if}

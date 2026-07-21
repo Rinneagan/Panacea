@@ -39,31 +39,7 @@
     { school: "University of North Carolina at Chapel Hill", location: "Chapel Hill, NC", rate: "17%", aid: "100% Need Met", supps: 2 },
     { school: "Wake Forest University", location: "Winston-Salem, NC", rate: "21%", aid: "100% Need Met", supps: 3 },
     { school: "Boston College", location: "Chestnut Hill, MA", rate: "15%", aid: "100% Need Met", supps: 1 },
-    { school: "Georgia Institute of Technology", location: "Atlanta, GA", rate: "16%", aid: "100% Need Met", supps: 1 },
-    { school: "University of Rochester", location: "Rochester, NY", rate: "39%", aid: "100% Need Met", supps: 1 },
-    { school: "Boston University", location: "Boston, MA", rate: "14%", aid: "100% Need Met", supps: 2 },
-    { school: "Brandeis University", location: "Waltham, MA", rate: "39%", aid: "100% Need Met", supps: 1 },
-    { school: "College of William & Mary", location: "Williamsburg, VA", rate: "33%", aid: "100% Need Met", supps: 1 },
-    { school: "University of Wisconsin-Madison", location: "Madison, WI", rate: "49%", aid: "100% Need Met", supps: 1 },
-    { school: "University of Illinois Urbana-Champaign", location: "Champaign, IL", rate: "45%", aid: "100% Need Met", supps: 2 },
-    { school: "University of Texas at Austin", location: "Austin, TX", rate: "31%", aid: "100% Need Met", supps: 3 },
-    { school: "Lehigh University", location: "Bethlehem, PA", rate: "37%", aid: "100% Need Met", supps: 1 },
-    { school: "Northeastern University", location: "Boston, MA", rate: "7%", aid: "100% Need Met", supps: 0 },
-    { school: "Tulane University", location: "New Orleans, LA", rate: "11%", aid: "100% Need Met", supps: 1 },
-    { school: "Pepperdine University", location: "Malibu, CA", rate: "49%", aid: "100% Need Met", supps: 1 },
-    { school: "University of Miami", location: "Coral Gables, FL", rate: "19%", aid: "100% Need Met", supps: 1 },
-    { school: "Santa Clara University", location: "Santa Clara, CA", rate: "52%", aid: "100% Need Met", supps: 1 },
-    { school: "Villanova University", location: "Villanova, PA", rate: "23%", aid: "100% Need Met", supps: 2 },
-    { school: "Syracuse University", location: "Syracuse, NY", rate: "52%", aid: "100% Need Met", supps: 1 },
-    { school: "University of Washington", location: "Seattle, WA", rate: "48%", aid: "100% Need Met", supps: 2 },
-    { school: "Penn State University", location: "University Park, PA", rate: "55%", aid: "100% Need Met", supps: 1 },
-    { school: "Purdue University", location: "West Lafayette, IN", rate: "53%", aid: "100% Need Met", supps: 2 },
-    { school: "University of Maryland", location: "College Park, MD", rate: "44%", aid: "100% Need Met", supps: 1 },
-    { school: "Rutgers University", location: "New Brunswick, NJ", rate: "66%", aid: "100% Need Met", supps: 0 },
-    { school: "Florida State University", location: "Tallahassee, FL", rate: "25%", aid: "100% Need Met", supps: 0 },
-    { school: "University of Florida", location: "Gainesville, FL", rate: "23%", aid: "100% Need Met", supps: 0 },
-    { school: "University of Georgia", location: "Athens, GA", rate: "43%", aid: "100% Need Met", supps: 1 },
-    { school: "Ohio State University", location: "Columbus, OH", rate: "53%", aid: "100% Need Met", supps: 0 }
+    { school: "Georgia Institute of Technology", location: "Atlanta, GA", rate: "16%", aid: "100% Need Met", supps: 1 }
   ];
 
   let generatedResults = $state<typeof MOCK_COLLEGES>([]);
@@ -73,17 +49,29 @@
     isGenerating = true;
     hasGenerated = false;
 
-    // Simulate AI loading delay
     setTimeout(() => {
-      // Return 6 random colleges from the mock data to simulate dynamic generation
       const shuffled = [...MOCK_COLLEGES].sort(() => 0.5 - Math.random());
-      generatedResults = shuffled.slice(0, 50);
+      generatedResults = shuffled.slice(0, 10);
       isGenerating = false;
       hasGenerated = true;
-    }, 2000);
+    }, 1500);
   }
 
   function addCollege(college: typeof MOCK_COLLEGES[0]) {
+    const isReach = parseInt(college.rate) <= 8;
+    const strategyObj = {
+      category: isReach ? 'Reach (< 8% Acceptance)' : `Target / Match (${college.rate} Acceptance)`,
+      school: college.school,
+      program: major || 'Intended Major',
+      hook: `Focus on demonstrating quantitative leadership and intellectual vitality in ${major || 'your major'}. ${college.school} highly values campus engagement and collaborative initiative.`,
+      essayFocus: `For ${college.school}, highlight specific professors, undergraduate labs, or interdisciplinary seminars that directly align with your goals in ${major || 'your field'}.`,
+      actionChecklist: [
+        `Draft core supplemental essay prompts for ${college.school}`,
+        `Align recommendation letters to highlight academic rigor in ${major || 'your field'}`,
+        `Add networking contacts for ${college.school} in your Panacea CRM`
+      ]
+    };
+
     const newApp = {
       id: crypto.randomUUID(),
       school: college.school,
@@ -93,7 +81,7 @@
       degreeType: 'Undergrad' as const,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      aiAdvice: `As an applicant for ${major} with an SAT of ${satScore || 'Test Optional'}, focus on demonstrating your quantitative skills and leadership. ${college.school} highly values intellectual vitality and community impact.`,
+      aiAdvice: JSON.stringify(strategyObj),
       supps: [
         { id: crypto.randomUUID(), prompt: "Please briefly elaborate on one of your extracurricular activities or work experiences.", wordLimit: 150, draft: "" },
         { id: crypto.randomUUID(), prompt: `Why are you interested in studying ${major} at ${college.school}?`, wordLimit: 250, draft: "" }
@@ -157,13 +145,8 @@
 
     <button onclick={generateMatches} disabled={!major || isGenerating} class="w-full btn-primary py-3 flex items-center justify-center gap-2 {(!major || isGenerating) ? 'opacity-50 cursor-not-allowed' : ''}">
       {#if isGenerating}
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 animate-sorting-hat text-amber-400">
-          <path d="M4 18s4-2 8-2 8 2 8 2" />
-          <path d="M6 18l2-8c1-4 3-6 4-6s1.5 2 2.5 5c1 3 1.5 6 1.5 9" />
-          <path d="M10 12c1 .5 3 .5 4 0" />
-          <path d="M11 15c.5.5 1.5.5 2 0" />
-        </svg>
-        Consulting the Sorting Hat...
+        <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+        Consulting Match Engine...
       {:else}
         <Sparkles size={18} /> Find My Matches
       {/if}

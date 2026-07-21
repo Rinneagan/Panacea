@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { appData, saveUserData } from '$lib/stores';
   import type { JobApplication, CollegeApplication, BaseApplication, VaultStory } from '$lib/types';
-  import { Wand2, Mail, Mic, FileSearch, Check, X, Sparkles, Activity, FilePenLine } from 'lucide-svelte';
+  import { Wand2, Mail, Mic, FileSearch, Check, X, Sparkles, Activity, FilePenLine, Target, FileText, CheckCircle } from 'lucide-svelte';
   import { fade, fly, scale } from 'svelte/transition';
   import { cubicOut, backOut } from 'svelte/easing';
   import confetti from 'canvas-confetti';
@@ -32,7 +32,28 @@
   ];
   
   let sidebarTab = $state<'history' | 'browser'>('history');
-  
+
+  let parsedStrategy = $derived.by(() => {
+    if (!entry.aiAdvice) return null;
+    try {
+      if (entry.aiAdvice.trim().startsWith('{')) {
+        return JSON.parse(entry.aiAdvice);
+      }
+    } catch (e) {}
+    return {
+      category: 'Strategic Analysis',
+      school: entry.school || 'Target Institution',
+      program: entry.program || 'Application Program',
+      hook: entry.aiAdvice,
+      essayFocus: 'Focus your supplemental essay on specific courses, faculty, and research labs unique to this institution.',
+      actionChecklist: [
+        'Tailor your personal statement for institutional fit',
+        'Review application deadlines and financial aid requirements',
+        'Log key alumni or faculty contacts in your Networking CRM'
+      ]
+    };
+  });
+
   $effect(() => {
     if (isOpen) {
       if (editId) {
@@ -45,121 +66,56 @@
         : { id: crypto.randomUUID(), status: 'Researching', school: '', degreeType: degreeType || 'Undergrad' };
       }
       
-      if (quill) {
-        quill.root.innerHTML = entry.notes || '';
-      }
-    }
-  });
-
-  onMount(async () => {
-    if (editorNode) {
-      const { default: Quill } = await import('quill');
-      quill = new Quill(editorNode, {
-        theme: 'snow',
-        placeholder: 'Add any notes, essay drafts, or scratchpad content here...',
-        modules: {
-          toolbar: [
-            ['bold', 'italic', 'underline', 'strike'],
-            ['blockquote', 'code-block'],
-            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-            [{ 'header': [1, 2, 3, false] }],
-            ['link', 'clean']
-          ]
+      // Initialize Quill async after modal opens
+      setTimeout(async () => {
+        if (editorNode && !quill) {
+          const QuillModule = await import('quill');
+          const Quill = QuillModule.default;
+          quill = new Quill(editorNode, {
+            theme: 'snow',
+            placeholder: 'Paste supplemental prompts, research notes, or interview prep thoughts...',
+            modules: {
+              toolbar: [
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link', 'blockquote', 'code-block'],
+                ['clean']
+              ]
+            }
+          });
+          
+          quill.on('text-change', () => {
+            const text = quill.getText().trim();
+            wordCount = text ? text.split(/\s+/).length : 0;
+            entry.notes = quill.root.innerHTML;
+          });
         }
-      });
-      quill.on('text-change', () => {
-        entry.notes = quill.root.innerHTML;
-        const text = quill.getText().trim();
-        wordCount = text ? text.split(/\s+/).length : 0;
-      });
-      // Initial word count
-      const text = quill.getText().trim();
-      wordCount = text ? text.split(/\s+/).length : 0;
+        
+        if (quill && entry.notes) {
+          quill.root.innerHTML = entry.notes;
+          const text = quill.getText().trim();
+          wordCount = text ? text.split(/\s+/).length : 0;
+        } else if (quill) {
+          quill.root.innerHTML = '';
+          wordCount = 0;
+        }
+
+        // Auto-run ATS scan if editing a job with existing inputs
+        if (type === 'job') scanATS();
+      }, 50);
+    } else {
+      quill = null;
     }
   });
-
-  function handleSchoolInput(e: Event) {
-    const q = (e.target as HTMLInputElement).value;
-    entry.school = q;
-    if (!q || q.length < 3) {
-      schoolSuggestions = [];
-      return;
-    }
-    isSearchingSchools = true;
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(async () => {
-      try {
-        const res = await fetch(`http://universities.hipolabs.com/search?country=United+States&name=${encodeURIComponent(q)}`);
-        let data = await res.json();
-        
-        const intlSchools = [
-          { name: 'University of Oxford', web_pages: ['http://www.ox.ac.uk/'] },
-          { name: 'University of Cambridge', web_pages: ['http://www.cam.ac.uk/'] },
-          { name: 'ETH Zurich', web_pages: ['https://ethz.ch/'] },
-          { name: 'Max Planck Institute', web_pages: ['https://www.mpg.de/'] },
-          { name: 'University of Toronto', web_pages: ['https://www.utoronto.ca/'] }
-        ];
-        const extra = intlSchools.filter(s => s.name.toLowerCase().includes(q.toLowerCase()));
-        
-        // Remove duplicates by name
-        const combined = [...data, ...extra];
-        const unique = Array.from(new Map(combined.map(item => [item.name, item])).values());
-        
-        schoolSuggestions = unique.slice(0, 8);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        isSearchingSchools = false;
-      }
-    }, 300);
-  }
-
-  function selectSchool(school: any) {
-    entry.school = school.name;
-    if (!entry.portalLink && school.web_pages && school.web_pages.length > 0) {
-      entry.portalLink = school.web_pages[0];
-    }
-    schoolSuggestions = [];
-    
-    // Auto-fetch essays immediately
-    const s = school.name.toLowerCase();
-    let prompts = `<h3><strong>General Prompts for ${school.name}</strong></h3><ul><li>Why are you interested in attending ${school.name}? (250 words)</li><li>Please briefly elaborate on one of your extracurricular activities or work experiences. (150 words)</li></ul><p><br></p>`;
-    
-    if (s.includes('stanford')) {
-      prompts = `<h3><strong>Stanford Supplemental Essays</strong></h3><ul><li>What is the most significant challenge that society faces today? (50 words)</li><li>Write a note to your future roommate that reveals something about you or that will help your roommate - and us - get to know you better. (250 words)</li><li>Tell us about something that is meaningful to you and why. (250 words)</li></ul><p><br></p>`;
-    } else if (s.includes('yale')) {
-      prompts = `<h3><strong>Yale Supplemental Essays</strong></h3><ul><li>What is it about Yale that has led you to apply? (125 words)</li><li>Reflect on a time you discussed an issue with someone holding an opposing view. (400 words)</li></ul><p><br></p>`;
-    } else if (s.includes('uchicago') || s.includes('chicago')) {
-      prompts = `<h3><strong>UChicago Supplemental Essays</strong></h3><ul><li>How does the University of Chicago satisfy your desire for a particular kind of learning? (250 words)</li><li>Find x. (500 words)</li></ul><p><br></p>`;
-    } else if (s.includes('mit') || s.includes('massachusetts institute of technology')) {
-      prompts = `<h3><strong>MIT Supplemental Essays</strong></h3><ul><li>Describe the world you come from; for example, your family, clubs, school, community, city, or town. (250 words)</li><li>Tell us about the most significant challenge you've faced or something important that didn't go according to plan. (250 words)</li></ul><p><br></p>`;
-    }
-    
-    if (quill) {
-      let currentHTML = quill.root.innerHTML;
-      
-      // Clean up previously injected prompts so they don't stack
-      currentHTML = currentHTML.replace(/<p><br><\/p><h3><strong>(?:General Prompts for|.*?Supplemental Essays)[\s\S]*?<\/strong><\/h3><ul>[\s\S]*?<\/ul><p><br><\/p>/gi, '');
-      currentHTML = currentHTML.replace(/<h3><strong>(?:General Prompts for|.*?Supplemental Essays)[\s\S]*?<\/strong><\/h3><ul>[\s\S]*?<\/ul>/gi, '');
-      
-      quill.clipboard.dangerouslyPasteHTML(prompts + currentHTML);
-      entry.notes = quill.root.innerHTML;
-      
-      // Update word count
-      const text = quill.getText().trim();
-      wordCount = text ? text.split(/\s+/).length : 0;
-    }
-  }
 
   function handleProgramInput(e: Event) {
-    const q = (e.target as HTMLInputElement).value;
-    entry.program = q;
-    if (!q) {
+    const val = (e.target as HTMLInputElement).value;
+    entry.program = val;
+    if (val.trim().length > 0) {
+      programSuggestions = UNIVERSAL_PROGRAMS.filter(p => p.toLowerCase().includes(val.toLowerCase())).slice(0, 6);
+    } else {
       programSuggestions = [];
-      return;
     }
-    const lower = q.toLowerCase();
-    programSuggestions = UNIVERSAL_PROGRAMS.filter(p => p.toLowerCase().includes(lower)).slice(0, 8);
   }
 
   function selectProgram(prog: string) {
@@ -167,57 +123,132 @@
     programSuggestions = [];
   }
 
-  let activeTab = $state<'details' | 'ats' | 'supps' | 'advice'>('details');
+  function handleSchoolInput(e: Event) {
+    const val = (e.target as HTMLInputElement).value;
+    entry.school = val;
+    clearTimeout(searchTimeout);
+    
+    if (val.trim().length < 2) {
+      schoolSuggestions = [];
+      isSearchingSchools = false;
+      return;
+    }
+    
+    isSearchingSchools = true;
+    searchTimeout = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://universities.hipolabs.com/search?name=${encodeURIComponent(val)}`);
+        if (res.ok) {
+          const data = await res.json();
+          // Filter duplicates
+          const unique: {name: string, web_pages: string[]}[] = [];
+          const names = new Set();
+          for (const item of data) {
+            if (!names.has(item.name)) {
+              names.add(item.name);
+              unique.push({ name: item.name, web_pages: item.web_pages });
+            }
+          }
+          schoolSuggestions = unique.slice(0, 6);
+        }
+      } catch (err) {
+        console.error('School search failed', err);
+      } finally {
+        isSearchingSchools = false;
+      }
+    }, 300);
+  }
 
-  // ATS Logic
+  function selectSchool(school: {name: string, web_pages: string[]}) {
+    entry.school = school.name;
+    if (school.web_pages && school.web_pages.length > 0 && !entry.portalLink) {
+      entry.portalLink = school.web_pages[0];
+    }
+    schoolSuggestions = [];
+  }
+
+  // ATS Resume Matcher Logic
   let atsScore = $state(0);
   let missingKeywords = $state<string[]>([]);
   let foundKeywords = $state<string[]>([]);
+  let activeTab = $state<'details' | 'ats' | 'supps' | 'advice'>('details');
 
   function scanATS() {
-    if (!entry.jobDescription) return;
+    const jd = (entry.jobDescription || '').toLowerCase();
     
-    let resumeText = $appData.globalResume || '';
+    let resumeText = '';
     if ($appData.masterResume) {
-      resumeText += ' ' + $appData.masterResume.skills;
-      for (const e of $appData.masterResume.experience) {
-        resumeText += ' ' + e.bullets.join(' ');
+      resumeText = JSON.stringify($appData.masterResume).toLowerCase();
+    } else {
+      resumeText = ($appData.globalResume || '').toLowerCase();
+    }
+
+    if (!jd || !resumeText) {
+      atsScore = 0;
+      missingKeywords = [];
+      foundKeywords = [];
+      return;
+    }
+
+    // Extraction of technical & professional keywords
+    const commonWords = new Set(['the', 'and', 'to', 'of', 'a', 'in', 'for', 'is', 'on', 'that', 'by', 'this', 'with', 'i', 'you', 'it', 'not', 'or', 'be', 'are', 'from', 'at', 'as', 'your', 'all', 'have', 'new', 'more', 'an', 'was', 'we', 'will', 'can', 'us', 'about', 'if', 'page', 'my', 'has', 'search', 'free', 'but', 'our', 'one', 'other', 'do', 'no', 'information', 'time', 'they', 'site', 'he', 'up', 'may', 'what', 'which', 'their', 'news', 'out', 'use', 'any', 'there', 'see', 'only', 'so', 'his', 'when', 'contact', 'here', 'business', 'who', 'web', 'also', 'now', 'help', 'get', 'pm', 'view', 'online', 'first', 'am', 'been', 'would', 'how', 'were', 'me', 'services', 'some', 'these', 'click', 'its', 'like', 'service', 'than', 'find', 'price', 'date', 'back', 'top', 'people', 'had', 'should', 'well', 'am', 'into', 'just', 'over', 'state', 'design', 'only', 'year', 'two', 'sub', 'job', 'team', 'work', 'work', 'work', 'work']);
+    
+    const words = jd.match(/\b[a-zA-Z]{3,}\b/g) || [];
+    const freq: Record<string, number> = {};
+    
+    words.forEach(w => {
+      const lower = w.toLowerCase();
+      if (!commonWords.has(lower)) {
+        freq[lower] = (freq[lower] || 0) + 1;
       }
-    }
-    if (!resumeText) return;
+    });
 
-    const stopWords = new Set(['about', 'after', 'again', 'against', 'because', 'before', 'being', 'below', 'between', 'cannot', 'could', 'doing', 'down', 'during', 'each', 'further', 'having', 'here', 'herself', 'himself', 'into', 'itself', 'more', 'most', 'myself', 'once', 'only', 'other', 'ought', 'ourselves', 'over', 'same', 'should', 'some', 'such', 'than', 'that', 'their', 'theirs', 'them', 'themselves', 'then', 'there', 'these', 'they', 'this', 'those', 'through', 'under', 'until', 'very', 'what', 'when', 'where', 'which', 'while', 'whom', 'with', 'would', 'your', 'yours', 'yourself', 'yourselves', 'experience', 'years', 'working', 'team', 'skills', 'ability', 'will', 'have', 'must', 'work', 'with']);
-    
-    const jdWords = entry.jobDescription.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
-    const resumeWords = resumeText.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
-    
-    const jdFreq = new Map<string, number>();
-    for (const w of jdWords) {
-      if (!stopWords.has(w)) jdFreq.set(w, (jdFreq.get(w) || 0) + 1);
-    }
-    
-    const sortedKeywords = Array.from(jdFreq.entries()).sort((a,b) => b[1] - a[1]).slice(0, 15).map(e => e[0]);
-    const resumeSet = new Set(resumeWords);
-    
-    foundKeywords = sortedKeywords.filter(k => resumeSet.has(k));
-    missingKeywords = sortedKeywords.filter(k => !resumeSet.has(k));
-    
-    atsScore = sortedKeywords.length ? Math.round((foundKeywords.length / sortedKeywords.length) * 100) : 0;
+    const sorted = Object.entries(freq)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15)
+      .map(entry => entry[0]);
+
+    const found: string[] = [];
+    const missing: string[] = [];
+
+    sorted.forEach(kw => {
+      if (resumeText.includes(kw)) {
+        found.push(kw);
+      } else {
+        missing.push(kw);
+      }
+    });
+
+    foundKeywords = found;
+    missingKeywords = missing;
+    atsScore = sorted.length > 0 ? Math.round((found.length / sorted.length) * 100) : 0;
   }
-  
-  $effect(() => {
-    if (activeTab === 'ats') {
-      scanATS();
-    }
-  });
 
+  // AI Power Tool Generators
   function generateColdEmail() {
-    const company = entry.company || '[Company Name]';
-    const role = entry.role || '[Role Name]';
-    
-    const email = `Subject: Quick question about the ${role} role at ${company}\n\nHi [Name],\n\nI hope this email finds you well!\n\nI'm reaching out because I recently applied for the ${role} position at ${company}. I've been following the team's recent work and would love to learn more about your experience there.\n\nDo you have 10 minutes next week for a quick virtual coffee chat? I'd love to hear your perspective on the culture.\n\nBest,\n[Your Name]`;
-    
-    entry.networkingNotes = (entry.networkingNotes ? entry.networkingNotes + '\n\n---\n\n' : '') + email;
+    if (!entry.company) {
+      alert("Please enter a Company name first!");
+      return;
+    }
+    const company = entry.company;
+    const role = entry.role || 'Software Engineer';
+    const email = `
+    <h3><strong>AI Networking Cold Email Draft</strong></h3>
+    <p><strong>Subject:</strong> Quick question regarding ${role} opportunities at ${company}</p>
+    <p>Hi [Name],</p>
+    <p>I noticed your work at ${company} and was really impressed by your team's recent initiatives. I'm a student passionate about building in this space and am currently applying for the ${role} position.</p>
+    <p>I would love to learn more about your experience at ${company}. Would you be open to a quick 10-minute coffee chat sometime this week?</p>
+    <p>Best regards,<br>[Your Name]</p>
+    <p><br></p>`;
+
+    if (quill) {
+      let currentHTML = quill.root.innerHTML;
+      quill.clipboard.dangerouslyPasteHTML(email + currentHTML);
+      entry.notes = quill.root.innerHTML;
+      
+      const text = quill.getText().trim();
+      wordCount = text ? text.split(/\s+/).length : 0;
+    }
   }
 
   function generateInterviewPrep() {
@@ -256,21 +287,6 @@
         <li>You noticed a 10% drop in a key metric. How do you investigate?</li>
       </ol>
       `;
-    } else if (role.includes('consulting') || role.includes('strategy') || role.includes('analyst')) {
-      prep += `
-      <h4><strong>Consulting Focus Areas:</strong></h4>
-      <ul>
-        <li>Case Studies (Profitability, Market Entry, M&A)</li>
-        <li>Market Sizing (Guesstimates)</li>
-        <li>Data Analysis & Synthesis</li>
-      </ul>
-      <h4><strong>Common Questions:</strong></h4>
-      <ol>
-        <li>Walk me through your framework for assessing a new market entry.</li>
-        <li>How many ping pong balls fit in a Boeing 747?</li>
-        <li>Tell me about a time you had to persuade a difficult client or stakeholder.</li>
-      </ol>
-      `;
     } else {
       prep += `
       <h4><strong>General Behavioral (STAR Method):</strong></h4>
@@ -285,7 +301,6 @@
         <li>Tell me about yourself and your background.</li>
         <li>Why do you want to work at ${company}?</li>
         <li>Tell me about a time you overcame a significant challenge.</li>
-        <li>Describe a situation where you failed. What did you learn?</li>
       </ol>
       `;
     }
@@ -294,7 +309,6 @@
     
     if (quill) {
       let currentHTML = quill.root.innerHTML;
-      // Prevent stacking if clicked multiple times
       currentHTML = currentHTML.replace(/<h3><strong>Interview Prep:[\s\S]*?<\/ol><p><br><\/p>/gi, '');
       quill.clipboard.dangerouslyPasteHTML(prep + currentHTML);
       entry.notes = quill.root.innerHTML;
@@ -309,9 +323,7 @@
   async function simulateAIGeneration(content: string) {
     if (isGenerating) return;
     isGenerating = true;
-    
-    // Simulate API delay
-    await new Promise(r => setTimeout(r, 1200));
+    await new Promise(r => setTimeout(r, 1000));
     
     if (quill) {
       let currentHTML = quill.root.innerHTML;
@@ -334,7 +346,7 @@
     const html = `
       <div style="background: rgba(99, 102, 241, 0.1); padding: 16px; border-left: 4px solid #6366f1; margin-bottom: 16px;">
         <h4 style="color: #4f46e5; margin-bottom: 8px;"><strong>✨ AI Auto-Answer generated from Vault Story: "${story.title}"</strong></h4>
-        <p>I recall a specific instance that deeply tested my resilience and problem-solving skills, which mirrors the core values of ${entry.company || entry.school || 'your organization'}. When faced with a critical obstacle, I immediately took ownership, reorganized the team's priorities, and executed a revised strategy. The result was not only a 40% improvement in efficiency but also a lasting framework that our team still uses today. I believe this direct bias-for-action and strategic thinking makes me a perfect fit for the ${entry.role || entry.program || 'open'} position.</p>
+        <p>I recall a specific instance that deeply tested my resilience and problem-solving skills, which mirrors the core values of ${entry.company || entry.school || 'your organization'}. When faced with a critical obstacle, I immediately took ownership, reorganized the team's priorities, and executed a revised strategy. The result was a 40% improvement in efficiency and a lasting framework that our team still uses today.</p>
       </div><p><br></p>`;
     await simulateAIGeneration(html);
   }
@@ -344,7 +356,7 @@
     const html = `
       <div style="background: rgba(16, 185, 129, 0.1); padding: 16px; border-left: 4px solid #10b981; margin-bottom: 16px;">
         <h4 style="color: #059669; margin-bottom: 8px;"><strong>✨ AI "Why Us" Draft for ${org}</strong></h4>
-        <p>I have been closely following ${org}'s recent strategic initiatives, particularly the launch of your latest product line and your commitment to sustainability. My background in rapid scaling and cross-functional leadership aligns perfectly with the growth trajectory you outlined in last quarter's earnings call. I am eager to bring my specific expertise to the team and help drive this mission forward.</p>
+        <p>I have been closely following ${org}'s recent strategic initiatives and core values. My background in rapid execution and analytical problem solving aligns perfectly with your growth trajectory. I am eager to bring my specific expertise to the team and help drive this mission forward.</p>
       </div><p><br></p>`;
     await simulateAIGeneration(html);
   }
@@ -380,21 +392,54 @@
       }
     }
 
-    if (!weakPoints) weakPoints = "<li>None! Your application looks incredibly strong.</li>";
-
-    if (!weakPoints) weakPoints = "<li>None! Your application looks incredibly strong.</li>";
+    if (!weakPoints) weakPoints = "<li>None! Your application looks exceptionally strong.</li>";
 
     const html = `
       <div style="background: rgba(245, 158, 11, 0.1); padding: 16px; border-left: 4px solid #f59e0b; margin-bottom: 16px;">
         <h4 style="color: #d97706; margin-bottom: 8px;"><strong>🏥 Application Health Score: ${score}/100</strong></h4>
-        <p><strong>Likelihood of Interview:</strong> ${score >= 80 ? 'High' : score >= 60 ? 'Moderate' : 'Low'}</p>
+        <p><strong>Likelihood of Success:</strong> ${score >= 80 ? 'High' : score >= 60 ? 'Moderate' : 'Needs Optimization'}</p>
         <p><strong>Weak Points Identified:</strong></p>
         <ul>
           ${weakPoints}
         </ul>
-        <p><strong>Action Item:</strong> ${score >= 80 ? 'Submit it!' : 'Address the weak points before applying.'}</p>
       </div><p><br></p>`;
     await simulateAIGeneration(html);
+  }
+
+  async function calculateCollegeStrategy() {
+    if (isGenerating) return;
+    isGenerating = true;
+    await new Promise(r => setTimeout(r, 1000));
+
+    const school = entry.school || 'Target University';
+    const program = entry.program || 'Intended Program';
+    const degree = entry.degreeType || 'Undergrad';
+
+    const isIvyPlus = /Stanford|MIT|Harvard|Yale|Princeton|Columbia|Penn|Brown|Dartmouth|Cornell|Chicago|Duke|Caltech/i.test(school);
+    const isTop20 = isIvyPlus || /Vanderbilt|Rice|WashU|USC|Northwestern|Johns Hopkins|Georgetown|Emory|Carnegie Mellon|UCLA|UC Berkeley/i.test(school);
+
+    const category = isIvyPlus ? 'Reach (< 8% Acceptance)' : isTop20 ? 'Target / Reach (10-18%)' : 'Balanced Match (20-40%)';
+    
+    const strategyObj = {
+      category,
+      school,
+      program,
+      hook: degree === 'PhD' 
+        ? `Frame your research narrative around interdisciplinary technical depth in ${program}. Highlight past research milestones and direct methodology fit with ${school}'s active faculty labs.` 
+        : `Position your candidacy around intellectual vitality in ${program}. Connect your extracurricular leadership directly to ${school}'s unique undergraduate research and interdisciplinary honors programs.`,
+      essayFocus: degree === 'PhD'
+        ? `In your Statement of Purpose, explicitly cite 2-3 faculty members at ${school} whose recent grants and publications align with your proposed research direction.`
+        : `In your 'Why ${school}' essay, avoid generic campus descriptions. Detail 2 specific upper-level seminars, faculty labs, and campus initiatives that align with your goals.`,
+      actionChecklist: [
+        `Align recommendation letters to emphasize analytical independence in ${program}`,
+        degree === 'PhD' ? `Reach out to target Lab PIs at ${school} to inquire about funding` : `Draft supplemental essays early highlighting institutional fit`,
+        `Log alumni or current student contacts in your Panacea Networking CRM`
+      ]
+    };
+
+    entry.aiAdvice = JSON.stringify(strategyObj);
+    isGenerating = false;
+    // Not persisted here: `entry` is a local copy. It's written to $appData and saved on "Save Application".
   }
 
   async function autoTailorResume() {
@@ -403,9 +448,8 @@
       return;
     }
     isGenerating = true;
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1500));
     
-    // Simulate AI restructuring the Master Resume to include ATS keywords
     const tailored = JSON.parse(JSON.stringify($appData.masterResume));
     if (missingKeywords.length > 0) {
       if (tailored.skills) {
@@ -413,7 +457,6 @@
       } else {
         tailored.skills = 'Optimized Skills: ' + missingKeywords.slice(0, 5).join(', ');
       }
-      // Simulate rewriting a bullet point
       if (tailored.experience.length > 0 && tailored.experience[0].bullets.length > 0) {
         tailored.experience[0].bullets[0] = `Leveraged ${missingKeywords[0] || 'core technologies'} to optimize workflows, increasing efficiency by 30%.`;
       }
@@ -472,28 +515,6 @@
   
   function close() {
     isOpen = false;
-  }
-
-  async function handleSmartPaste() {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!text) return;
-      
-      let parsedRole = '';
-      let parsedCompany = '';
-      
-      const atMatch = text.match(/(?:Role|Position|Title)?\s*[:\-]?\s*([A-Za-z\s]+?)\s+at\s+([A-Z][A-Za-z0-9\s]+)/i);
-      if (atMatch) {
-        parsedRole = atMatch[1].trim();
-        parsedCompany = atMatch[2].trim();
-      }
-
-      if (parsedCompany && !entry.company) entry.company = parsedCompany;
-      if (parsedRole && !entry.role) entry.role = parsedRole;
-      if (text.includes('http') && !entry.portalLink) entry.portalLink = text.match(/https?:\/\/[^\s]+/)?.[0] || '';
-    } catch (e) {
-      console.error('Failed to read clipboard', e);
-    }
   }
 </script>
 
@@ -684,18 +705,10 @@
                         <input type="checkbox" bind:checked={entry.publications} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 bg-white" />
                         <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">Publications / Portfolio</span>
                       </label>
-                      <label class="flex items-center gap-3 cursor-pointer group">
-                        <input type="checkbox" bind:checked={entry.gre} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 bg-white" />
-                        <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">GRE Scores Submitted</span>
-                      </label>
                     {:else}
                       <label class="flex items-center gap-3 mb-3 cursor-pointer group">
                         <input type="checkbox" bind:checked={entry.caActivities} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 bg-white" />
                         <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">CA Activities List</span>
-                      </label>
-                      <label class="flex items-center gap-3 cursor-pointer group">
-                        <input type="checkbox" bind:checked={entry.satAct} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 bg-white" />
-                        <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">SAT / ACT Scores</span>
                       </label>
                     {/if}
                   </div>
@@ -704,41 +717,12 @@
                     <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Letters of Rec</p>
                     <label class="flex items-center gap-3 mb-3 cursor-pointer group">
                       <input type="checkbox" bind:checked={entry.lor1} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 bg-white" />
-                      <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">Recommender 1 Submitted</span>
+                      <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">Recommender 1</span>
                     </label>
                     <label class="flex items-center gap-3 mb-3 cursor-pointer group">
                       <input type="checkbox" bind:checked={entry.lor2} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 bg-white" />
-                      <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">Recommender 2 Submitted</span>
+                      <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">Recommender 2</span>
                     </label>
-                    
-                    {#if entry.degreeType === 'PhD'}
-                      <label class="flex items-center gap-3 mb-3 cursor-pointer group">
-                        <input type="checkbox" bind:checked={entry.lor3} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 bg-white" />
-                        <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">Recommender 3 Submitted</span>
-                      </label>
-                    {:else}
-                      <label class="flex items-center gap-3 mb-3 cursor-pointer group">
-                        <input type="checkbox" bind:checked={entry.lorCounselor} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 bg-white" />
-                        <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">Counselor Rec Submitted</span>
-                      </label>
-                    {/if}
-                    
-                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-6 mb-3">Financial Aid</p>
-                    {#if entry.degreeType === 'PhD'}
-                      <label class="flex items-center gap-3 cursor-pointer group">
-                        <input type="checkbox" bind:checked={entry.fundingApp} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 bg-white" />
-                        <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">Funding / Fellowship App</span>
-                      </label>
-                    {:else}
-                      <label class="flex items-center gap-3 mb-3 cursor-pointer group">
-                        <input type="checkbox" bind:checked={entry.fafsa} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 bg-white" />
-                        <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">FAFSA Submitted</span>
-                      </label>
-                      <label class="flex items-center gap-3 cursor-pointer group">
-                        <input type="checkbox" bind:checked={entry.cssProfile} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 bg-white" />
-                        <span class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">CSS Profile Submitted</span>
-                      </label>
-                    {/if}
                   </div>
                 </div>
               </div>
@@ -747,11 +731,8 @@
             <div class="form-field full editor-container mt-6 relative">
               <div class="flex items-center justify-between mb-1.5 ml-1">
                 <label for="em-notes" class="block text-sm font-bold text-slate-700 dark:text-slate-300">Notes, Essays & Scratchpad</label>
-                
-                <div class="flex items-center gap-3">
-                  <div class="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-1 rounded-lg">
-                    {wordCount} words
-                  </div>
+                <div class="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-1 rounded-lg">
+                  {wordCount} words
                 </div>
               </div>
               <div id="em-notes" bind:this={editorNode} class="min-h-[300px] bg-white dark:bg-[#1A1A1A] rounded-xl border border-slate-200 dark:border-white/10"></div>
@@ -766,7 +747,7 @@
                 </div>
                 <div>
                   <h3 class="text-sm font-bold text-indigo-900 dark:text-indigo-300">How it works</h3>
-                  <p class="text-xs font-medium text-indigo-700/80 dark:text-indigo-400 mt-1 leading-relaxed">Paste the full Job Description below. Panacea will extract the most frequent keywords and cross-reference them against your Master Resume to generate an ATS Match Score. Add missing keywords to your resume to beat the automated screeners.</p>
+                  <p class="text-xs font-medium text-indigo-700/80 dark:text-indigo-400 mt-1 leading-relaxed">Paste the full Job Description below. Panacea will extract the most frequent keywords and cross-reference them against your Master Resume to generate an ATS Match Score.</p>
                 </div>
               </div>
 
@@ -777,25 +758,9 @@
                     <label for="ats-jd" class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5 ml-1">Job Description</label>
                     <textarea id="ats-jd" bind:value={entry.jobDescription} oninput={scanATS} placeholder="Paste the full job posting here..." class="input-field min-h-[150px] custom-scroll text-xs"></textarea>
                   </div>
-
-                  {#if $appData.masterResume && ($appData.masterResume.name || $appData.masterResume.experience.length > 0)}
-                    <div class="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4">
-                      <p class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2"><Check size={16} class="text-emerald-500" /> Master Resume Linked</p>
-                      <p class="text-xs text-slate-500 mt-1">We are using your structured Master Resume from the Resume Studio for ATS matching and Auto-Tailoring.</p>
-                    </div>
-                  {:else}
-                    <div>
-                      <div class="flex justify-between items-center mb-1.5 ml-1">
-                        <label for="ats-res" class="block text-sm font-bold text-slate-700 dark:text-slate-300">Master Resume</label>
-                        <span class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Legacy</span>
-                      </div>
-                      <textarea id="ats-res" bind:value={$appData.globalResume} oninput={() => { scanATS(); saveUserData(); }} placeholder="Paste your entire resume text here. This saves globally across all jobs." class="input-field min-h-[150px] custom-scroll text-xs bg-slate-50 dark:bg-black/20"></textarea>
-                    </div>
-                  {/if}
                   
                   <div class="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 rounded-xl p-4 mt-2">
                     <h4 class="text-sm font-bold text-indigo-900 dark:text-indigo-300 mb-2 flex items-center gap-2"><Sparkles size={16} /> Auto-Tailor Engine</h4>
-                    <p class="text-xs text-indigo-700/80 dark:text-indigo-400 mb-4">Click below to generate a new version of your Master Resume perfectly tailored to this specific job description.</p>
                     <button type="button" class="w-full btn-primary flex items-center justify-center gap-2 text-sm" onclick={autoTailorResume} disabled={isGenerating || !entry.jobDescription || !$appData.masterResume}>
                       {#if isGenerating}
                         <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -805,77 +770,14 @@
                       {/if}
                     </button>
                   </div>
-                  
-                  {#if entry.tailoredResume}
-                    <div class="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-xl p-4 text-emerald-800 dark:text-emerald-300">
-                      <p class="text-sm font-bold flex items-center gap-2"><Check size={16} /> Resume successfully tailored!</p>
-                      <p class="text-xs mt-1 mb-3">We've rewritten your bullets to include missing ATS keywords while maintaining your formatting.</p>
-                      
-                      <div class="bg-white dark:bg-[#111] border border-emerald-100 dark:border-emerald-500/20 rounded-lg p-4 custom-scroll overflow-y-auto max-h-[300px]">
-                        <h5 class="font-serif font-bold uppercase text-black dark:text-white mb-2">{entry.tailoredResume.name}</h5>
-                        {#each entry.tailoredResume.experience as exp}
-                          <div class="mb-2 text-black dark:text-white">
-                            <div class="font-bold text-xs">{exp.role} <span class="font-normal italic">at {exp.company}</span></div>
-                            <ul class="list-disc pl-4 text-[10px] space-y-0.5 mt-1">
-                              {#each exp.bullets as bullet}
-                                {#if bullet}<li>{bullet}</li>{/if}
-                              {/each}
-                            </ul>
-                          </div>
-                        {/each}
-                        <div class="text-[10px] font-bold text-black dark:text-white mt-2">Skills: <span class="font-normal">{entry.tailoredResume.skills}</span></div>
-                      </div>
-                    </div>
-                  {/if}
                 </div>
 
                 <!-- Results -->
                 <div class="bg-white dark:bg-[#1A1A1A] rounded-2xl border border-slate-200 dark:border-white/10 p-6 flex flex-col relative overflow-hidden">
-                  <div class="absolute top-0 left-0 w-full h-1">
-                    <div class="h-full transition-all duration-1000 {atsScore >= 75 ? 'bg-emerald-500' : atsScore >= 50 ? 'bg-amber-500' : 'bg-rose-500'}" style="width: {atsScore}%"></div>
-                  </div>
-                  
                   <div class="text-center mb-6 mt-2">
                     <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">ATS Match Score</p>
                     <div class="text-6xl font-extrabold {atsScore >= 75 ? 'text-emerald-500' : atsScore >= 50 ? 'text-amber-500' : 'text-rose-500'}">{atsScore}%</div>
                   </div>
-
-                  {#if entry.jobDescription && ($appData.globalResume || $appData.masterResume)}
-                    <div class="flex-1 overflow-y-auto custom-scroll pr-2">
-                      <div class="mb-4">
-                        <h4 class="text-xs font-bold text-rose-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                          <X size={14} /> Missing Keywords
-                        </h4>
-                        <div class="flex flex-wrap gap-1.5">
-                          {#if missingKeywords.length === 0}
-                            <span class="text-xs text-slate-400 italic">None!</span>
-                          {/if}
-                          {#each missingKeywords as kw}
-                            <span class="px-2 py-1 rounded bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-bold border border-rose-100 dark:border-rose-500/20">{kw}</span>
-                          {/each}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h4 class="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                          <Check size={14} /> Found Keywords
-                        </h4>
-                        <div class="flex flex-wrap gap-1.5">
-                          {#if foundKeywords.length === 0}
-                            <span class="text-xs text-slate-400 italic">None!</span>
-                          {/if}
-                          {#each foundKeywords as kw}
-                            <span class="px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-100 dark:border-emerald-500/20">{kw}</span>
-                          {/each}
-                        </div>
-                      </div>
-                    </div>
-                  {:else}
-                    <div class="flex-1 flex flex-col items-center justify-center text-center opacity-50">
-                      <FileSearch size={32} class="text-slate-400 mb-3" />
-                      <p class="text-sm font-medium text-slate-500">Paste both your Resume and the Job Description to see your score.</p>
-                    </div>
-                  {/if}
                 </div>
               </div>
             </div>
@@ -886,55 +788,85 @@
                   <FilePenLine size={20} />
                 </div>
                 <div>
-                  <h3 class="text-sm font-bold text-emerald-900 dark:text-emerald-300">Supplemental Essays</h3>
-                  <p class="text-xs font-medium text-emerald-700/80 dark:text-emerald-400 mt-1 leading-relaxed">Here are the exact supplemental essay prompts required for {entry.school || 'this school'}. Draft and save your responses directly below each prompt.</p>
+                  <h3 class="text-sm font-bold text-emerald-900 dark:text-emerald-300">Supplemental Writing Prompts</h3>
+                  <p class="text-xs font-medium text-emerald-700/80 dark:text-emerald-400 mt-1 leading-relaxed">Track and draft your institution-specific supplemental essay responses.</p>
                 </div>
               </div>
-
-              {#if entry.supps && entry.supps.length > 0}
-                <div class="space-y-6">
-                  {#each entry.supps as supp}
-                    <div class="bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden">
-                      <div class="p-4 bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
-                        <p class="text-sm font-bold text-slate-800 dark:text-white leading-relaxed">{supp.prompt}</p>
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-indigo-500 mt-2">Max {supp.wordLimit} Words</p>
-                      </div>
-                      <div class="p-4 relative">
-                        <textarea bind:value={supp.draft} placeholder="Start writing your draft..." class="w-full min-h-[150px] bg-transparent border-none focus:ring-0 text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 resize-y custom-scroll"></textarea>
-                        <div class="absolute bottom-3 right-4">
-                          <span class="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-white/10 px-2 py-1 rounded-md">{supp.draft ? supp.draft.trim().split(/\s+/).length : 0} / {supp.wordLimit} words</span>
-                        </div>
-                      </div>
-                    </div>
-                  {/each}
-                </div>
-              {:else}
-                <div class="flex-1 flex flex-col items-center justify-center text-center p-12 bg-slate-50 dark:bg-white/5 border border-dashed border-slate-200 dark:border-white/10 rounded-3xl mt-4">
-                  <Check size={32} class="text-slate-400 mb-3" />
-                  <p class="text-sm font-bold text-slate-700 dark:text-slate-300">No Supplemental Essays</p>
-                  <p class="text-xs text-slate-500 mt-2 font-medium">This school does not require any additional writing supplements.</p>
-                </div>
-              {/if}
             </div>
           {:else if activeTab === 'advice'}
+            <!-- AI Strategy Engine View -->
             <div class="flex flex-col gap-6 fade-in">
-              <div class="bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-2xl p-6 relative overflow-hidden">
-                <div class="absolute -right-10 -top-10 w-40 h-40 bg-amber-400 rounded-full mix-blend-screen filter blur-[50px] opacity-20"></div>
-                
-                <h3 class="text-xl font-black text-amber-900 dark:text-amber-300 mb-4 flex items-center gap-2">
-                  <Sparkles size={20} class="text-amber-500" /> Optimize Strategy
-                </h3>
-                
-                <div class="bg-white/50 dark:bg-black/20 backdrop-blur-md rounded-xl p-5 border border-amber-200/50 dark:border-amber-500/20 shadow-inner">
-                  {#if entry.aiAdvice}
-                    <p class="text-sm font-medium text-amber-900 dark:text-amber-200 leading-relaxed">{entry.aiAdvice}</p>
-                  {:else}
-                    <p class="text-sm font-medium text-amber-900/60 dark:text-amber-200/60 italic leading-relaxed">No specific AI advice generated for this school yet. Use the AI Matcher or click "Optimize Strategy" to generate actionable insights.</p>
+              <div class="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-orange-500/10 border border-amber-200 dark:border-amber-500/20 rounded-3xl p-6 relative overflow-hidden">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-xl font-black text-amber-900 dark:text-amber-300 flex items-center gap-2">
+                    <Sparkles size={20} class="text-amber-500" /> Optimize Strategy Engine
+                  </h3>
+                  {#if parsedStrategy?.category}
+                    <span class="text-xs font-bold px-3 py-1 bg-amber-500 text-white rounded-full shadow-sm">
+                      {parsedStrategy.category}
+                    </span>
                   {/if}
                 </div>
                 
-                <button type="button" class="mt-6 w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all" onclick={() => alert('Strategy Optimized! (Simulated)')}>
-                  <Sparkles size={16} /> Re-Calculate Strategy
+                {#if parsedStrategy}
+                  <div class="space-y-4">
+                    <!-- Hook Strategy -->
+                    <div class="bg-white/80 dark:bg-black/40 backdrop-blur-md rounded-2xl p-4 border border-amber-200/50 dark:border-amber-500/20">
+                      <h4 class="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                        <Target size={14} /> Application Pitch & Narrative Hook
+                      </h4>
+                      <p class="text-xs font-medium text-slate-700 dark:text-slate-200 leading-relaxed">
+                        {parsedStrategy.hook}
+                      </p>
+                    </div>
+
+                    <!-- Essay Guidance -->
+                    <div class="bg-white/80 dark:bg-black/40 backdrop-blur-md rounded-2xl p-4 border border-amber-200/50 dark:border-amber-500/20">
+                      <h4 class="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                        <FileText size={14} /> Essay Angle & Institutional Alignment
+                      </h4>
+                      <p class="text-xs font-medium text-slate-700 dark:text-slate-200 leading-relaxed">
+                        {parsedStrategy.essayFocus}
+                      </p>
+                    </div>
+
+                    <!-- Action Items -->
+                    {#if parsedStrategy.actionChecklist && parsedStrategy.actionChecklist.length > 0}
+                      <div class="bg-white/80 dark:bg-black/40 backdrop-blur-md rounded-2xl p-4 border border-amber-200/50 dark:border-amber-500/20">
+                        <h4 class="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                          <CheckCircle size={14} /> Key Action Items
+                        </h4>
+                        <ul class="space-y-1.5 text-xs text-slate-700 dark:text-slate-200 font-medium">
+                          {#each parsedStrategy.actionChecklist as item}
+                            <li class="flex items-start gap-2">
+                              <span class="text-amber-500 font-bold">•</span>
+                              <span>{item}</span>
+                            </li>
+                          {/each}
+                        </ul>
+                      </div>
+                    {/if}
+                  </div>
+                {:else}
+                  <div class="bg-white/50 dark:bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-amber-200/50 dark:border-amber-500/20 text-center">
+                    <p class="text-xs font-medium text-amber-900/60 dark:text-amber-200/60 italic leading-relaxed">
+                      No strategic blueprint generated for {entry.school || 'this school'} yet. Click "Calculate Strategy Blueprint" below to run the AI analysis engine.
+                    </p>
+                  </div>
+                {/if}
+                
+                <button 
+                  type="button" 
+                  class="mt-6 w-full py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all text-sm" 
+                  onclick={calculateCollegeStrategy}
+                  disabled={isGenerating}
+                >
+                  {#if isGenerating}
+                    <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Running AI Strategy Engine...
+                  {:else}
+                    <Sparkles size={16} /> Re-Calculate Strategy Blueprint
+                  {/if}
                 </button>
               </div>
             </div>
@@ -945,7 +877,6 @@
         <div class="md:col-span-1 bg-slate-50 dark:bg-white/5 border-l border-slate-200 dark:border-white/10 p-6 overflow-y-auto custom-scroll flex flex-col">
           <div class="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-white/10 pb-2">
             <button class="text-xs font-bold uppercase tracking-widest transition-colors {sidebarTab === 'history' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 -mb-[3px] pb-2' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 pb-2'}" onclick={() => sidebarTab = 'history'}>History</button>
-            <button class="text-xs font-bold uppercase tracking-widest transition-colors {sidebarTab === 'browser' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 -mb-[3px] pb-2' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 pb-2'}" onclick={() => sidebarTab = 'browser'}>Mini Browser</button>
           </div>
 
           {#if sidebarTab === 'history'}
@@ -959,65 +890,18 @@
                   </div>
                 {/each}
               {:else}
-                <p class="text-sm font-medium text-slate-400">No history recorded yet.</p>
+                <p class="text-xs text-slate-400">No status changes recorded yet.</p>
               {/if}
-            </div>
-          {:else}
-            {@const searchUrl = entry.portalLink || `https://www.google.com/search?igu=1&q=${encodeURIComponent((entry.school || entry.company || 'College Application') + ' admissions')}`}
-            <!-- Mini Browser Tab -->
-            <div class="flex-1 flex flex-col relative min-h-[350px]">
-              <div class="flex justify-between items-center mb-3">
-                <span class="text-xs text-slate-500 font-medium truncate pr-2" title={searchUrl}>{searchUrl.startsWith('https://www.google.com') ? 'Google Search' : searchUrl}</span>
-                <a href={searchUrl} target="_blank" rel="noopener" class="shrink-0 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors shadow-sm border border-indigo-100 dark:border-indigo-500/20">Open ↗</a>
-              </div>
-              <div class="flex-1 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 bg-white">
-                <iframe src={searchUrl} class="w-full h-full border-none" title="Mini Browser" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
-              </div>
             </div>
           {/if}
         </div>
       </div>
-      
-      <!-- Footer -->
-      <div class="px-6 py-4 border-t border-slate-200 dark:border-white/10 flex justify-end gap-3 bg-white dark:bg-[#111]">
-        <button class="btn-secondary" onclick={close}>Cancel</button>
-        <button class="btn-primary" onclick={save}>Save Changes</button>
+
+      <!-- Footer Buttons -->
+      <div class="px-6 py-4 border-t border-slate-200 dark:border-white/10 flex justify-end gap-3 bg-slate-50 dark:bg-white/5">
+        <button class="btn-secondary text-sm" onclick={close}>Cancel</button>
+        <button class="btn-primary text-sm" onclick={save}>Save Application</button>
       </div>
     </div>
   </div>
 {/if}
-
-<style>
-  @keyframes fadeIn {
-    from { opacity: 0; backdrop-filter: blur(0px); }
-    to { opacity: 1; backdrop-filter: blur(12px); }
-  }
-  @keyframes elasticPop {
-    0% { transform: scale(0.9) translateY(40px); opacity: 0; }
-    50% { transform: scale(1.02) translateY(-10px); opacity: 1; }
-    100% { transform: scale(1) translateY(0); opacity: 1; }
-  }
-  .animate-fadeIn {
-    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-  .animate-elasticPop {
-    animation: elasticPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  }
-
-  .form-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;
-  }
-  .form-field.full { grid-column: 1 / -1; }
-  
-  :global(.ql-toolbar) {
-    border-radius: 0.75rem 0.75rem 0 0 !important;
-    border-color: var(--border-color, #e2e8f0) !important;
-    background: transparent !important;
-  }
-  :global(.ql-container) {
-    border-radius: 0 0 0.75rem 0.75rem !important;
-    border-color: var(--border-color, #e2e8f0) !important;
-    font-family: inherit !important;
-    font-size: 0.875rem !important;
-  }
-</style>
